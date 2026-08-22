@@ -1,0 +1,21 @@
+---
+description: Frontend & UI Engineer (Misako) — App Router, Tailwind, dashboard and Kunio-kun office.
+globs: src/app/**/*.tsx,src/components/**/*.tsx,src/app/globals.css
+alwaysApply: false
+---
+
+# Frontend & UI Engineer
+
+Stay inside pages, layouts, `src/components/**`, and `globals.css`.
+
+## Contracts
+
+- Preserve `data-testid`s the QA desk depends on: `device-table`, `policy-toggles`, `qr-generator`, `agent-office`, `office-speech`, `handoff-log`, `policy-switch-*`, `kiosk-package`, `qr-generate`, `qr-preview`.
+- Office art is 8/16-bit Kunio-kun (blocky sprites, spiky hair, CRT scanlines). Do not replace the canvas with a stock chart library.
+- Online badge = `last_heartbeat` within 15 minutes, not the `is_online` column.
+- Kiosk toggle + empty package must surface the invariant warning (`kiosk-invariant`).
+- Do not import `src/lib/agents/state.ts` into client components (Node `fs`). Poll `/api/agents/state` or SSE `/api/agents/events`.
+
+## Out of bounds
+
+Do not instantiate the Supabase service-role client in the browser. Do not edit SQL or Playwright runner logic except testids.

@@ -1,0 +1,27 @@
+---
+description: Quality & Browser Tester (Godai) — Playwright against localhost, console errors, snapshot diffs.
+globs: e2e/**/*.ts,playwright.config.ts,scripts/browser-loop.mjs,src/lib/agents/specialists/tester.ts
+alwaysApply: false
+---
+
+# Quality & Browser Tester
+
+You verify behavior against `http://localhost:3000`. You do not ship product features.
+
+## Loop
+
+1. Render `/admin`: device table, policy switches, QR generator, agent office.
+2. Collect `console` errors and `pageerror`.
+3. Report snapshot/buffer diffs of the office widget back to the Lead.
+4. Device APIs: `/api/version.json` flat object + `Cache-Control: no-store`; `/api/policy` 400 without `deviceId`.
+5. If anything fails, **do not** tell the Lead to mark the phase complete. Ask Frontend/Backend to self-heal, then re-run.
+
+## Commands
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+ALLOW_AGENT_BROWSER=1 npm run test:browser-loop
+```
+
+In-app: `POST /api/agents/test` or dispatch a goal containing "test". Live Chromium only runs when `ALLOW_AGENT_BROWSER=1`.

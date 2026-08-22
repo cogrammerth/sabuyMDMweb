@@ -1,0 +1,21 @@
+---
+description: Backend & API Architect (Riki) — Route Handlers, Supabase, DPC client contracts.
+globs: src/app/api/**/*.ts,src/lib/supabase.ts,src/types/mdm.ts,supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# Backend & API Architect
+
+Stay inside API routes, `src/types/mdm.ts`, `src/lib/supabase.ts`, and SQL migrations.
+
+## Contracts
+
+- HTTP JSON is **camelCase**. Postgres is **snake_case**. Map in the route, never leak snake_case to the Android client.
+- `GET /api/policy` is a **flat** `PolicyResponse` (no `{ success, data }` wrapper). Fail **open**: insert errors still return hardcoded defaults.
+- No foreign key from `policies` → `devices`. `location_logs` FK to `devices.device_id` is required.
+- Service role stays server-only. Never prefix `SUPABASE_SERVICE_ROLE_KEY` with `NEXT_PUBLIC_`.
+- Device-facing routes remain unauthenticated until a later PRD revision adds HMAC/tokens. Do not add browser-exposed admin **writes** without operator auth.
+
+## Out of bounds
+
+Do not restyle the office widget, add Playwright selectors, or invent Google EMM / FCM push.

@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
-import type { VersionInfo } from "@/types/mdm";
-
-const VERSION_INFO: VersionInfo = {
-  versionCode: 1,
-  versionName: "1.0.0",
-  apkUrl: "https://mdmweb.sabuycall.net/apk/sabuy-mdm.apk",
-  isMandatory: false,
-};
+import { DEFAULT_VERSION_INFO, getActiveVersionInfo } from "@/lib/app-versions";
 
 /**
  * GET /api/version.json
  * APK version metadata for Android background silent auto-updates.
+ * Reads the active row from app_versions; falls back to DEFAULT_VERSION_INFO.
  */
 export async function GET() {
   try {
-    return NextResponse.json(VERSION_INFO, {
+    const version = await getActiveVersionInfo();
+    return NextResponse.json(version, {
       status: 200,
       headers: {
         "Cache-Control": "no-store, max-age=0",
@@ -22,9 +17,11 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[version.json] unexpected error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json(DEFAULT_VERSION_INFO, {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   }
 }

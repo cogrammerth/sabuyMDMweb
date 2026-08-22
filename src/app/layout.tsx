@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
+import { Press_Start_2P } from "next/font/google";
 import "./globals.css";
+
+const pixel = Press_Start_2P({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-pixel",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Sabuy MDM Web Hub",
-  description: "Backend API & Database Engine for Sabuy MDM",
+  description: "Device Owner control plane and Nekketsu agent office",
 };
 
 export default function RootLayout({
@@ -12,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={pixel.variable}>
       <body>{children}</body>
     </html>
   );

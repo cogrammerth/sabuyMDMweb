@@ -1,30 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { DEFAULT_POLICY, toPolicyInsert, toPolicyResponse } from "@/lib/policies";
 import type { Policy, PolicyResponse } from "@/types/mdm";
-
-const DEFAULT_POLICY: PolicyResponse = {
-  disableCamera: false,
-  disableFactoryReset: true,
-  disableSafeBoot: true,
-  disableUsbDebugging: false,
-  kioskMode: false,
-  kioskPackage: "",
-  hiddenApps: [],
-  suspendedApps: [],
-};
-
-function toPolicyResponse(policy: Policy): PolicyResponse {
-  return {
-    disableCamera: policy.disable_camera,
-    disableFactoryReset: policy.disable_factory_reset,
-    disableSafeBoot: policy.disable_safe_boot,
-    disableUsbDebugging: policy.disable_usb_debugging,
-    kioskMode: policy.kiosk_mode,
-    kioskPackage: policy.kiosk_package ?? "",
-    hiddenApps: policy.hidden_apps ?? [],
-    suspendedApps: policy.suspended_apps ?? [],
-  };
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,26 +31,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (existingPolicy) {
-      return NextResponse.json(toPolicyResponse(existingPolicy), {
+      return NextResponse.json(toPolicyResponse(existingPolicy as Policy), {
         status: 200,
       });
     }
 
-    const now = new Date().toISOString();
     const { data: createdPolicy, error: createError } = await supabase
       .from("policies")
-      .insert({
-        device_id: deviceId,
-        disable_camera: DEFAULT_POLICY.disableCamera,
-        disable_factory_reset: DEFAULT_POLICY.disableFactoryReset,
-        disable_safe_boot: DEFAULT_POLICY.disableSafeBoot,
-        disable_usb_debugging: DEFAULT_POLICY.disableUsbDebugging,
-        kiosk_mode: DEFAULT_POLICY.kioskMode,
-        kiosk_package: DEFAULT_POLICY.kioskPackage,
-        hidden_apps: DEFAULT_POLICY.hiddenApps,
-        suspended_apps: DEFAULT_POLICY.suspendedApps,
-        updated_at: now,
-      })
+      .insert(toPolicyInsert(deviceId, DEFAULT_POLICY))
       .select("*")
       .maybeSingle();
 
@@ -91,18 +56,20 @@ export async function GET(request: NextRequest) {
           return NextResponse.json(DEFAULT_POLICY, { status: 200 });
         }
 
-        return NextResponse.json(toPolicyResponse(racedPolicy), {
+        return NextResponse.json(toPolicyResponse(racedPolicy as Policy), {
           status: 200,
         });
       }
 
       console.error("[policy] auto-create failed:", createError);
       // Still return defaults so the device can continue operating.
-      return NextResponse.json(DEFAULT_POLICY, { status: 200 });
+      return NextResponse.json(DEFAULT_POLICY satisfies PolicyResponse, {
+        status: 200,
+      });
     }
 
     if (createdPolicy) {
-      return NextResponse.json(toPolicyResponse(createdPolicy), {
+      return NextResponse.json(toPolicyResponse(createdPolicy as Policy), {
         status: 200,
       });
     }

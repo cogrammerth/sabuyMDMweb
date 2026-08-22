@@ -30,6 +30,20 @@ npm install
 npm run dev
 ```
 
+## Operator console
+
+`http://localhost:3000/admin` — fleet table, policy preview, QR extras, and the Nekketsu agent office.
+
+```bash
+npm run test:e2e
+npx playwright install chromium
+ALLOW_AGENT_BROWSER=1 npm run test:browser-loop
+```
+
+Dispatch a floor run: `POST /api/agents/dispatch` with `{ "goal": "health check" }`.
+
+Operator auth is **not** wired yet — do not expose `/admin` on the public fleet origin.
+
 ## API Endpoints
 
 | Method | Path | Description |

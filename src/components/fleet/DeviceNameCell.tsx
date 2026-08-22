@@ -1,0 +1,113 @@
+"use client";
+
+import { useState } from "react";
+
+export default function DeviceNameCell({
+  deviceId,
+  initialName,
+}: {
+  deviceId: string;
+  initialName: string | null;
+}) {
+  const [name, setName] = useState(initialName);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(initialName ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function openEditor() {
+    setDraft(name ?? "");
+    setError(null);
+    setEditing(true);
+  }
+
+  function cancel() {
+    setDraft(name ?? "");
+    setError(null);
+    setEditing(false);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/devices/${encodeURIComponent(deviceId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deviceName: draft.trim() || null }),
+        }
+      );
+      const body = (await res.json()) as {
+        success?: boolean;
+        error?: string;
+        device?: { deviceName?: string | null };
+      };
+      if (!res.ok || body.success === false) {
+        setError(body.error ?? "Failed to save name");
+        return;
+      }
+      const next = body.device?.deviceName ?? (draft.trim() || null);
+      setName(next);
+      setEditing(false);
+    } catch {
+      setError("Failed to save name");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="name-edit" data-testid={`device-name-edit-${deviceId}`}>
+        <input
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="Friendly name"
+          data-testid={`device-name-input-${deviceId}`}
+          disabled={saving}
+        />
+        <div className="name-edit-actions">
+          <button
+            type="button"
+            className="secondary"
+            onClick={cancel}
+            disabled={saving}
+            data-testid={`device-name-cancel-${deviceId}`}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => void save()}
+            disabled={saving}
+            data-testid={`device-name-save-${deviceId}`}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+        {error ? <p className="field-error">{error}</p> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="name-display">
+      <span data-testid={`device-name-${deviceId}`}>
+        {name && name.trim() ? name : "—"}
+      </span>
+      <button
+        type="button"
+        className="secondary name-edit-trigger"
+        onClick={openEditor}
+        data-testid={`device-name-edit-trigger-${deviceId}`}
+        aria-label={`Edit name for ${deviceId}`}
+      >
+        Edit
+      </button>
+    </div>
+  );
+}

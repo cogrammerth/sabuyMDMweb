@@ -1,0 +1,22 @@
+---
+description: Security & DPC Policy Auditor (Tosa) — locktask, RLS, Safe Boot / ADB, Zero-Touch extras.
+globs: src/app/api/policy/**/*.ts,supabase/migrations/**/*.sql,src/components/fleet/QrGenerator.tsx,src/lib/agents/specialists/security.ts
+alwaysApply: false
+---
+
+# Security & DPC Policy Auditor
+
+Audit Device Owner posture. Do not restyle UI or loosen defaults to make a demo look friendlier.
+
+## Must remain true
+
+- RLS enabled on `devices`, `policies`, `location_logs` with **no** anon/authenticated GRANTs in Phase 1.
+- Default policy: `disableFactoryReset: true`, `disableSafeBoot: true` (safe-mode bypass blocked).
+- `kioskMode: true` requires a non-empty launchable `kioskPackage`.
+- Policy auto-create failure still returns hardcoded defaults (device must not brick).
+- Zero-Touch extras must include component name, APK download URL, and **checksum** (never operator-typed as the long-term source of truth).
+- `SUPABASE_SERVICE_ROLE_KEY` is never a public env binding.
+
+## Out of bounds
+
+Do not add Google Android Management API. Do not store APK binaries in this repo.

@@ -43,6 +43,27 @@ export interface LocationLog {
   recorded_at: string;
 }
 
+/** CamelCase breadcrumb point for map polylines. */
+export interface DeviceLocationPoint {
+  id: string;
+  latitude: number;
+  longitude: number;
+  recordedAt: string;
+}
+
+/** Latest GPS + fleet metadata for the fleet map pin. */
+export interface DeviceLatestLocation {
+  deviceId: string;
+  deviceName: string | null;
+  model: string | null;
+  batteryLevel: number | null;
+  isOnline: boolean;
+  lastHeartbeat: string | null;
+  latitude: number;
+  longitude: number;
+  recordedAt: string;
+}
+
 /** Default enterprise policy returned / auto-created when no policy row exists. */
 export interface PolicyResponse {
   disableCamera: boolean;
@@ -61,6 +82,80 @@ export interface VersionInfo {
   apkUrl: string;
   isMandatory: boolean;
 }
+
+/** Operator-facing APK release row (camelCase HTTP boundary). */
+export interface AppVersionRecord {
+  id: string;
+  versionCode: number;
+  versionName: string;
+  apkUrl: string;
+  isMandatory: boolean;
+  isActive: boolean;
+  releasedAt: string;
+}
+
+/** Operator publish body for PUT /api/admin/app-version. */
+export interface AppVersionWriteInput {
+  versionCode: number;
+  versionName: string;
+  apkUrl: string;
+  isMandatory?: boolean;
+}
+
+/** Operator device rename body for PATCH /api/admin/devices/:deviceId. */
+export interface DeviceNameWriteInput {
+  deviceName?: string | null;
+}
+
+/** CamelCase fleet row at the HTTP / UI boundary. `isOnline` is computed. */
+export interface FleetDevice {
+  deviceId: string;
+  deviceName: string | null;
+  model: string | null;
+  androidVersion: string | null;
+  batteryLevel: number | null;
+  storageFreeMb: number | null;
+  isDeviceOwner: boolean;
+  isOnline: boolean;
+  lastHeartbeat: string | null;
+  createdAt: string;
+}
+
+export interface FleetSummary {
+  total: number;
+  online: number;
+  offline: number;
+  lowBattery: number;
+}
+
+/** Operator policy save body (camelCase). */
+export interface PolicyWriteInput {
+  disableCamera?: boolean;
+  disableFactoryReset?: boolean;
+  disableSafeBoot?: boolean;
+  disableUsbDebugging?: boolean;
+  kioskMode?: boolean;
+  kioskPackage?: string;
+  hiddenApps?: string[];
+  suspendedApps?: string[];
+}
+
+/** Android Enterprise Zero-Touch extras encoded into the provisioning QR. */
+export interface ProvisioningExtras {
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": string;
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": string;
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": string;
+  "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": boolean;
+  "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
+    serverUrl: string;
+    deviceId: string;
+  };
+}
+
+export type ProvisioningChecksumSource =
+  | "local-file"
+  | "remote-apk"
+  | "env-override";
 
 export type Json =
   | string
@@ -140,6 +235,26 @@ type LocationLogUpdate = {
   recorded_at?: string;
 };
 
+type AppVersionInsert = {
+  id?: string;
+  version_code: number;
+  version_name: string;
+  apk_url: string;
+  is_mandatory?: boolean;
+  is_active?: boolean;
+  released_at?: string;
+};
+
+type AppVersionUpdate = {
+  id?: string;
+  version_code?: number;
+  version_name?: string;
+  apk_url?: string;
+  is_mandatory?: boolean;
+  is_active?: boolean;
+  released_at?: string;
+};
+
 /**
  * Supabase Database schema.
  * Uses structural type aliases (not interfaces) so rows satisfy
@@ -193,6 +308,20 @@ export type Database = {
         };
         Insert: LocationLogInsert;
         Update: LocationLogUpdate;
+        Relationships: [];
+      };
+      app_versions: {
+        Row: {
+          id: string;
+          version_code: number;
+          version_name: string;
+          apk_url: string;
+          is_mandatory: boolean;
+          is_active: boolean;
+          released_at: string;
+        };
+        Insert: AppVersionInsert;
+        Update: AppVersionUpdate;
         Relationships: [];
       };
     };
