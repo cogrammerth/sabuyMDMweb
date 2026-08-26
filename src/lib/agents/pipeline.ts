@@ -61,7 +61,7 @@ async function handoff(
     packetLabel: task.title,
   });
   store.speak(from, `Packet → ${to}: ${task.title}`);
-  await sleep(900);
+  await sleep(1200);
   const record: HandoffRecord = {
     id: uid("handoff"),
     from,

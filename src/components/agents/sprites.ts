@@ -1,4 +1,4 @@
-export type PixelFrame = "idle" | "idle2" | "type1" | "type2" | "sip";
+export type PixelFrame = "idle" | "idle2" | "type1" | "type2" | "sip" | "walk1" | "walk2";
 
 /** Palette keys used in sprite strings. */
 export const PIXEL: Record<string, string> = {
@@ -116,12 +116,50 @@ const SIP: string[] = [
   "...##.##........",
 ];
 
+const WALK1: string[] = [
+  "....h.h.h.......",
+  "...hhhhhhh......",
+  "..hhhhhhhhh.....",
+  "..hh#eee#hh.....",
+  "..h#essse#h.....",
+  "...#sssss#......",
+  "....#sss#.......",
+  "....#nnn#.......",
+  "...#jjjjj#......",
+  "..#jjsssjj#.....",
+  ".#jjjsssjjj#....",
+  ".#jjjjdjjjj#....",
+  "..#ppppppp#.....",
+  ".#oo#..#oo#.....",
+  "##......##......",
+];
+
+const WALK2: string[] = [
+  "...h.h.h........",
+  "..hhhhhhh.......",
+  ".hhhhhhhhh......",
+  ".hh#eee#hh......",
+  ".h#essse#h......",
+  "..#sssss#.......",
+  "...#sss#........",
+  "...#nnn#........",
+  "..#jjjjj#.......",
+  ".#jjsssjj#......",
+  "#jjjsssjjj#.....",
+  "#jjjjdjjjj#.....",
+  ".#ppppppp#......",
+  "..#o#..#o#......",
+  "...##.##........",
+];
+
 export const FRAMES: Record<PixelFrame, string[]> = {
   idle: IDLE,
   idle2: IDLE2,
   type1: TYPE1,
   type2: TYPE2,
   sip: SIP,
+  walk1: WALK1,
+  walk2: WALK2,
 };
 
 export const DESK_LAYOUT: Record<

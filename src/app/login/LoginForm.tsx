@@ -35,7 +35,7 @@ export default function LoginForm() {
   }
 
   return (
-    <form className="panel login-card" onSubmit={(event) => void submit(event)}>
+    <form className="panel login-card" data-testid="login-form" onSubmit={(event) => void submit(event)}>
       <header className="panel-head">
         <h2>Operator sign-in</h2>
         <span>Shared password gate</span>

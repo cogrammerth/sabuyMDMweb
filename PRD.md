@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Product | Sabuy MDM Web Hub |
-| Version | 0.4.0 (Phase 4 complete) |
-| Last updated | 2026-08-22 |
+| Version | 0.5.0 (production readiness + automated smoke gate) |
+| Last updated | 2026-08-26 |
 | Primary domain | `https://mdmweb.sabuycall.net` |
 | Repo package | `sabuycall-mdm-web` |
 | Audience | Android Device Owner (DPC) fleet + internal operators |
@@ -88,6 +88,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 │    POST /api/heartbeat          │
 │    GET  /api/policy             │
 │    GET  /api/version.json       │
+│    PUT  /api/admin/app-version  │
 │    GET  /api/admin/devices      │
 │    PUT  /api/admin/devices/:id/policy
 │    GET  /api/admin/locations/latest
@@ -101,7 +102,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 │  devices            │
 │  policies           │
 │  location_logs      │
-│  (app_versions TBD) │
+│  app_versions       │
 └─────────────────────┘
 ```
 
@@ -111,7 +112,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | --- | --- | --- | --- |
 | `HeartbeatWorker` | Client → Hub | `POST /api/heartbeat` | Upsert `devices`; optional insert `location_logs` |
 | `PolicySyncWorker` | Hub → Client | `GET /api/policy?deviceId=` | Read/insert `policies` |
-| `UpdateWorker` | Hub → Client | `GET /api/version.json` | Currently **in-code constant** (not a table) |
+| `UpdateWorker` | Hub → Client | `GET /api/version.json` | Active row from `app_versions` (file/constant fallback) |
 
 ### 2.2 Source map (Phase 1)
 
@@ -306,9 +307,9 @@ GET /api/version.json
 
 **Headers:** `Cache-Control: no-store, max-age=0` so workers never cache a stale APK pointer.
 
-**Current implementation:** hardcoded `VERSION_INFO` in `src/app/api/version.json/route.ts`. There is **no** `app_versions` table yet. Phase 2/4 should move this to Postgres so operators can publish a new APK without a code deploy.
+**Current implementation:** `GET /api/version.json` reads the active `app_versions` row (`is_active = true`). If the table is missing or empty, it falls back to `data/app-version-active.json` then `DEFAULT_VERSION_INFO`. Operators publish a new APK channel with `PUT /api/admin/app-version` (no code deploy).
 
-**Error:** 500 `{ "success": false, "error": "Internal server error" }` on unexpected exception.
+**Error:** unexpected exceptions still return **200 + fallback constants** so UpdateWorker is not bricked. `500 { "success": false }` is not used on this route.
 
 ---
 
@@ -469,11 +470,38 @@ Public liveness probe (no operator auth). Does not return connection strings, ke
 
 **Headers:** `Cache-Control: no-store, max-age=0`. Railway `railway.json` healthcheck path is `/api/health`.
 
-### 3.8 Planned APIs (not implemented)
+### 3.8 App release + device rename (production readiness)
+
+#### `GET /api/admin/app-version`
+
+Operator-gated. Returns `{ success, active, fallback }` where `active` is the current `app_versions` row (or file-fallback record) and `fallback` is `DEFAULT_VERSION_INFO` when no row exists.
+
+#### `PUT /api/admin/app-version`
+
+Operator-gated publish. Deactivates the previous active row, upserts on `version_code`, and writes the file fallback.
+
+**Request**
+
+```json
+{
+  "versionCode": 2,
+  "versionName": "1.1.0",
+  "apkUrl": "https://mdmweb.sabuycall.net/apk/sabuy-mdm.apk",
+  "isMandatory": false
+}
+```
+
+`apkUrl` must be HTTPS. `versionCode` must be a positive integer.
+
+#### `PATCH /api/admin/devices/:deviceId`
+
+Operator-gated rename. Body `{ "deviceName": "Store Front Tablet" }` or `null` to clear. Updates `devices.device_name`.
+
+### 3.9 Planned APIs (not implemented)
 
 | Method | Path | Phase | Purpose |
 | --- | --- | --- | --- |
-| `PUT` | `/api/admin/app-version` | later | Update published APK metadata |
+| — | device token / HMAC on heartbeat + policy | later | Stop anonymous fleet spam |
 
 ---
 
@@ -540,11 +568,9 @@ Because of the FK, a heartbeat **must** upsert `devices` before inserting locati
 
 ---
 
-### 4.4 `public.app_versions` — **not created**
+### 4.4 `public.app_versions`
 
-Gemini-style placeholder for when version metadata leaves the hardcoded route.
-
-Suggested shape (implement when operators need UI publishing):
+Canonical SQL: `supabase/migrations/002_app_versions.sql`. RLS enabled, no anon grants. Served by `GET /api/version.json`; written by `PUT /api/admin/app-version`.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -553,10 +579,8 @@ Suggested shape (implement when operators need UI publishing):
 | `version_name` | text | NOT NULL |
 | `apk_url` | text | NOT NULL |
 | `is_mandatory` | boolean | NOT NULL, default `false` |
-| `is_active` | boolean | Only one active row served by `/api/version.json` |
+| `is_active` | boolean | Operator-published channel; `GET /api/version.json` reads the active row |
 | `released_at` | timestamptz | default `now()` |
-
-Until this table exists, change APK metadata by editing `VERSION_INFO` and redeploying.
 
 ---
 
@@ -568,6 +592,7 @@ Until this table exists, change APK metadata by editing `VERSION_INFO` and redep
 | **2** | Fleet Dashboard & Remote Policy UI | **Completed** | Operator console: list devices, edit policy, mark online |
 | **3** | Zero-Touch QR Provisioning Generator | **Completed** | Encode DPC extras into a scannable QR for factory reset / new devices |
 | **4** | Geo-Tracking Maps & Railway Production Hardening | **Completed** | Map view of `location_logs`; healthcheck; security headers |
+| **5** | Production readiness & smoke gate | **Completed** | `app_versions` channel, device rename, mandatory Playwright smoke |
 
 Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase 4 is **hardening** (env, health checks, APK hosting, online-timeout job), not “first deploy ever.”
 
@@ -582,7 +607,7 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 - [x] `devices`, `policies`, `location_logs` + RLS
 - [x] `POST /api/heartbeat`
 - [x] `GET /api/policy?deviceId=`
-- [x] `GET /api/version.json` (hardcoded)
+- [x] `GET /api/version.json` (active `app_versions` row with file/constant fallback)
 - [x] Placeholder home page listing the three endpoints
 - [x] `/admin` console shell (fleet table, policy toggles, QR preview, agent office)
 
@@ -590,8 +615,7 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 - Device/API authentication (heartbeat / policy still open)
 - `is_online` column is advisory; dashboards compute from `last_heartbeat`
-- Heartbeat fields for `device_name` / `is_device_owner`
-- `app_versions` table
+- Heartbeat fields for `is_device_owner`
 
 ---
 
@@ -608,8 +632,6 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 **Deferred**
 
-- Rename device (`device_name`) from the UI.
-- Publish APK metadata without redeploy (`app_versions` / `/settings/app`).
 - Supabase Auth (email) — the shared password gate is the Phase 2 decision.
 
 **Acceptance (met)**
@@ -661,7 +683,24 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 - Retention job for old `location_logs`.
 - Device token on heartbeat/policy to stop anonymous fleet spam.
 - Host APK at a stable URL (`/apk/sabuy-mdm.apk` or object storage) if not already on the CDN.
-- `app_versions` table / `PUT /api/admin/app-version`.
+
+---
+
+### Production readiness — **Completed**
+
+**Shipped**
+
+- [x] `app_versions` table + RLS (`002_app_versions.sql`)
+- [x] `GET /api/version.json` reads the active row (file/constant fallback)
+- [x] `PUT /api/admin/app-version` + `/settings` release editor
+- [x] `PATCH /api/admin/devices/:id` + inline fleet name editor
+- [x] Mandatory smoke gate: `e2e/smoke-gate.spec.ts` + in-app tester fetch smoke (health, handshake, heartbeat GPS, UI/auth, QR)
+
+**Acceptance (met)**
+
+- Publishing APK metadata updates the next `UpdateWorker` poll without a hub redeploy.
+- Friendly `device_name` is editable from `/devices` and persisted.
+- QA desk cannot sign off unless health, policy/version handshake, heartbeat upsert, UI loads, and Zero-Touch QR are green.
 
 ---
 
@@ -774,6 +813,14 @@ In-app workflow engine used by the operator console (and mirrored as Cursor desk
 
 Live Chromium (`scripts/browser-loop.mjs`) runs only when `ALLOW_AGENT_BROWSER=1` (local/CI with Playwright browsers). Fetch smoke always runs. A failing tester report **blocks** orchestrator sign-off.
 
+**Mandatory smoke gate** (Godai, against `http://localhost:3000`):
+
+1. `GET /api/health` → 200, `healthy`, DB `connected`
+2. `GET /api/version.json` and `GET /api/policy?deviceId=test-device-01` return valid payloads
+3. `POST /api/heartbeat` with mock GPS/battery → 200 and upserts fleet + location
+4. `/login`, `/devices`, `/map`, `/provisioning` load without uncaught console errors or 500s; unauthenticated UI redirects to `/login` when the operator gate is required
+5. Fleet table search/filter responds; Zero-Touch QR renders without runtime exceptions
+
 Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks, typing vs idle, paper-packet handoff, speech bubble).
 
 ---
@@ -782,6 +829,7 @@ Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks,
 
 | Date | Change |
 | --- | --- |
+| 2026-08-26 | Production readiness: `app_versions`, device rename, `/settings`, mandatory smoke gate |
 | 2026-08-22 | Phase 4: fleet Leaflet map, location history, `/api/health`, security headers |
 | 2026-08-22 | Phase 3: Zero-Touch QR (`/provisioning`), computed APK checksum, download/print |
 | 2026-08-22 | Phase 2: fleet dashboard, remote policy editor, admin PUT, 15-min online, operator gate |

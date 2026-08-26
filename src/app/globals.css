@@ -507,6 +507,16 @@ textarea {
     transparent 1px,
     transparent 3px
   );
+  animation: office-scan 0.45s linear infinite;
+}
+
+@keyframes office-scan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 4px;
+  }
 }
 
 .office-speech {

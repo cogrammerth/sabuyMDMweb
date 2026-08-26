@@ -36,6 +36,17 @@ test.describe("Admin dashboard rendering", () => {
 
     await expect(page.getByTestId("agent-office")).toBeVisible();
     await expect(page.getByTestId("office-speech")).toBeVisible();
+    await expect(page.getByTestId("office-canvas")).toBeVisible();
+
+    const canvas = page.getByTestId("office-canvas");
+    const first = await canvas.evaluate((el) =>
+      (el as HTMLCanvasElement).toDataURL()
+    );
+    await page.waitForTimeout(500);
+    const second = await canvas.evaluate((el) =>
+      (el as HTMLCanvasElement).toDataURL()
+    );
+    expect(first, "office canvas should animate while idle").not.toEqual(second);
 
     expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
   });

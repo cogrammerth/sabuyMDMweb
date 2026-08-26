@@ -154,6 +154,15 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
   );
   checks.push(
     check(
+      "protected-redirect-login",
+      middleware.includes('new URL("/login"') &&
+        middleware.includes("NextResponse.redirect") &&
+        middleware.includes('login.searchParams.set("next"'),
+      "Unauthenticated UI requests redirect to /login with next="
+    )
+  );
+  checks.push(
+    check(
       "app-version-gated",
       adminAppVersion.includes("requireOperatorJson"),
       "PUT /api/admin/app-version requires the operator gate"

@@ -13,6 +13,28 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
   const base = origin();
 
   try {
+    const login = await fetch(`${base}/login`, { cache: "no-store" });
+    const loginHtml = await login.text();
+    checks.push(check("login-200", login.ok, `GET /login → ${login.status}`));
+    checks.push(
+      check(
+        "login-form",
+        loginHtml.includes('data-testid="login-form"') ||
+          loginHtml.includes('data-testid="operator-password"'),
+        "Operator login form present"
+      )
+    );
+  } catch (error) {
+    checks.push(
+      check(
+        "login-reachable",
+        false,
+        `Could not fetch ${base}/login (${error instanceof Error ? error.message : "unknown"})`
+      )
+    );
+  }
+
+  try {
     const res = await fetch(`${base}/admin`, { cache: "no-store" });
     const html = await res.text();
     checks.push(

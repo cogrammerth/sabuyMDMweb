@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AGENT_ROSTER } from "@/lib/agents/roster";
 import type {
-  ActiveHandoff,
   AgentId,
   AgentWorkflowState,
   PipelineStatus,
@@ -58,15 +57,23 @@ function isAssigned(id: AgentId, state: AgentWorkflowState | null): boolean {
   return state.current_agent === id || state.activeHandoff?.to === id;
 }
 
-function idleFrame(now: number, desk: number): PixelFrame {
-  const cycle = Math.floor(now / 180) + desk * 7;
-  if (cycle % 23 === 0) return "sip";
+function idleFrame(nowMs: number, desk: number): PixelFrame {
+  const cycle = Math.floor(nowMs / 220) + desk * 5;
+  if (cycle % 19 === 0) return "sip";
   return cycle % 2 === 0 ? "idle" : "idle2";
 }
 
-function workFrame(now: number, desk: number): PixelFrame {
-  const cycle = Math.floor(now / 8) + desk;
+function workFrame(nowMs: number, desk: number): PixelFrame {
+  const cycle = Math.floor(nowMs / 90) + desk;
   return cycle % 2 === 0 ? "type1" : "type2";
+}
+
+function walkFrame(nowMs: number): PixelFrame {
+  return Math.floor(nowMs / 110) % 2 === 0 ? "walk1" : "walk2";
+}
+
+function floorBusy(state: AgentWorkflowState | null): boolean {
+  return state?.status === "WORKING" || state?.status === "VALIDATING";
 }
 
 function drawPixel(
@@ -92,15 +99,27 @@ function drawSprite(
   ox: number,
   oy: number,
   agent: AgentId,
-  frame: PixelFrame
+  frame: PixelFrame,
+  flip = false
 ) {
   const rows = FRAMES[frame];
+  ctx.save();
+  if (flip) {
+    ctx.translate(Math.round(ox) + 16, Math.round(oy));
+    ctx.scale(-1, 1);
+    ox = 0;
+    oy = 0;
+  } else {
+    ox = Math.round(ox);
+    oy = Math.round(oy);
+  }
   for (let y = 0; y < rows.length; y++) {
     const row = rows[y];
     for (let x = 0; x < row.length; x++) {
       drawPixel(ctx, ox + x, oy + y, recolor(row[x], agent));
     }
   }
+  ctx.restore();
 }
 
 function drawDesk(
@@ -155,12 +174,16 @@ function drawScene(ctx: CanvasRenderingContext2D, t: number) {
   ctx.fillRect(37, 12, 2, 40);
   ctx.fillRect(10, 30, 56, 2);
   ctx.fillStyle = "#fff8e8";
-  const cloud = Math.floor(t / 40) % 30;
-  ctx.fillRect(18 + cloud, 20, 10, 4);
-  ctx.fillRect(22 + cloud, 18, 8, 4);
+  const cloud = Math.floor(t / 80) % 36;
+  ctx.fillRect(16 + cloud, 20, 12, 4);
+  ctx.fillRect(20 + cloud, 17, 9, 4);
+  const cloud2 = (cloud + 18) % 36;
+  ctx.fillRect(14 + cloud2, 28, 8, 3);
+  ctx.fillRect(16 + cloud2, 26, 6, 3);
 
+  const sway = Math.floor(t / 180) % 2;
   ctx.fillStyle = "#2d6b3a";
-  ctx.fillRect(292, 62, 16, 28);
+  ctx.fillRect(292 + sway, 62, 16, 28);
   ctx.fillStyle = "#5c3a1e";
   ctx.fillRect(298, 86, 4, 8);
 
@@ -169,9 +192,9 @@ function drawScene(ctx: CanvasRenderingContext2D, t: number) {
   ctx.fillStyle = "#1a1208";
   ctx.fillRect(250, 20, 24, 18);
   ctx.fillStyle = "#f0e8c8";
-  const hours = new Date().getHours() % 12;
+  const seconds = Math.floor(t / 1000) % 12;
   ctx.fillRect(261, 24, 2, 8);
-  ctx.fillRect(261, 29, 3 + (hours % 5), 2);
+  ctx.fillRect(261, 29, 4 + (seconds % 6), 2);
 
   ctx.fillStyle = "#3d2a18";
   ctx.fillRect(0, 86, width, 4);
@@ -215,20 +238,21 @@ function drawBubble(
 
 function drawPacket(
   ctx: CanvasRenderingContext2D,
-  handoff: ActiveHandoff,
-  t: number
+  x: number,
+  y: number,
+  to: AgentId
 ) {
-  const from = DESK_LAYOUT[handoff.from];
-  const to = DESK_LAYOUT[handoff.to];
-  const u = (t % 50) / 50;
-  const x = from.x + (to.x - from.x) * u;
-  const y = from.y + (to.y - from.y) * u - Math.sin(u * Math.PI) * 28;
   ctx.fillStyle = "#1a1208";
   ctx.fillRect(x + 4, y - 2, 8, 6);
   ctx.fillStyle = "#fff8e0";
   ctx.fillRect(x + 5, y - 1, 6, 4);
-  ctx.fillStyle = JERSEY[handoff.to].fill;
+  ctx.fillStyle = JERSEY[to].fill;
   ctx.fillRect(x + 6, y, 4, 2);
+}
+
+function handoffProgress(startedAt: number, nowMs: number, durationMs: number) {
+  if (!startedAt) return 0;
+  return Math.max(0, Math.min(1, (nowMs - startedAt) / durationMs));
 }
 
 function statusTone(status: PipelineStatus): string {
@@ -253,6 +277,7 @@ export default function AgentOfficeView() {
   const [busy, setBusy] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const handoffAnimRef = useRef({ key: "", startedAt: 0 });
 
   useEffect(() => {
     let stopped = false;
@@ -276,7 +301,12 @@ export default function AgentOfficeView() {
     try {
       es = new EventSource("/api/agents/events");
       es.onmessage = (event) => {
-        if (!stopped) apply(JSON.parse(event.data) as AgentWorkflowState);
+        if (stopped) return;
+        try {
+          apply(JSON.parse(event.data) as AgentWorkflowState);
+        } catch {
+          /* keep last good snapshot; polling covers bad frames */
+        }
       };
     } catch {
       /* polling covers this */
@@ -290,44 +320,89 @@ export default function AgentOfficeView() {
   }, []);
 
   useEffect(() => {
-    let frame = 0;
     let raf = 0;
-    const loop = () => {
-      frame += 1;
+    const loop = (nowMs: number) => {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
       const snapshot = stateRef.current;
       if (ctx && canvas) {
         ctx.imageSmoothingEnabled = false;
         ctx.clearRect(0, 0, SCENE.width, SCENE.height);
-        drawScene(ctx, frame);
+        drawScene(ctx, nowMs);
+
+        const busyFloor = floorBusy(snapshot);
+        const handoff = snapshot?.activeHandoff ?? null;
+        const handoffKey = handoff
+          ? `${handoff.from}->${handoff.to}:${handoff.packetLabel}`
+          : "";
+        if (handoffKey !== handoffAnimRef.current.key) {
+          handoffAnimRef.current = {
+            key: handoffKey,
+            startedAt: handoffKey ? nowMs : 0,
+          };
+        }
+        const walkU = handoff
+          ? handoffProgress(handoffAnimRef.current.startedAt, nowMs, 1100)
+          : 0;
+        const walkingId = handoff?.from ?? null;
+
         for (const id of AGENTS) {
           const desk = DESK_LAYOUT[id];
-          const active = snapshot?.current_agent === id;
-          const working =
-            active &&
-            (snapshot?.status === "WORKING" || snapshot?.status === "VALIDATING");
-          drawDesk(ctx, desk.x, desk.y, desk.monitor, Boolean(working));
-          const sprite = working
-            ? workFrame(frame, AGENT_ROSTER[id].deskIndex)
-            : idleFrame(frame, AGENT_ROSTER[id].deskIndex);
-          drawSprite(ctx, desk.x, desk.y, id, sprite);
-          if (active) {
-            drawBadge(
-              ctx,
-              desk.x,
-              desk.y,
-              JERSEY[id].fill,
-              frame
-            );
+          const assigned = isAssigned(id, snapshot);
+          const running = openTask(id, snapshot)?.status === "running";
+          const current = snapshot?.current_agent === id;
+          const workingHere =
+            busyFloor && assigned && walkingId !== id;
+          const glow =
+            workingHere &&
+            (running || current || Math.floor(nowMs / 140) % 2 === 0);
+          drawDesk(ctx, desk.x, desk.y, desk.monitor, Boolean(glow));
+        }
+
+        for (const id of AGENTS) {
+          if (id === walkingId) continue;
+          const desk = DESK_LAYOUT[id];
+          const assigned = isAssigned(id, snapshot);
+          const current = snapshot?.current_agent === id;
+          const workingHere = busyFloor && assigned;
+          const bob = workingHere
+            ? Math.floor(nowMs / 140) % 2
+            : Math.floor(nowMs / 380 + AGENT_ROSTER[id].deskIndex) % 4 === 0
+              ? 1
+              : 0;
+          const sprite = workingHere
+            ? workFrame(nowMs, AGENT_ROSTER[id].deskIndex)
+            : idleFrame(nowMs, AGENT_ROSTER[id].deskIndex);
+          drawSprite(ctx, desk.x, desk.y - bob, id, sprite);
+          if (current || (busyFloor && assigned)) {
+            drawBadge(ctx, desk.x, desk.y - bob, JERSEY[id].fill, nowMs / 16);
           }
         }
-        if (snapshot?.activeHandoff) {
-          drawPacket(ctx, snapshot.activeHandoff, frame);
+
+        if (handoff && walkingId) {
+          const from = DESK_LAYOUT[handoff.from];
+          const to = DESK_LAYOUT[handoff.to];
+          const x = from.x + (to.x - from.x) * walkU;
+          const y =
+            from.y + (to.y - from.y) * walkU - Math.sin(walkU * Math.PI) * 18;
+          const flip = to.x < from.x;
+          drawSprite(ctx, x, y, walkingId, walkFrame(nowMs), flip);
+          drawPacket(
+            ctx,
+            x,
+            y - 10 - Math.sin(walkU * Math.PI) * 10,
+            handoff.to
+          );
         }
+
         if (snapshot?.speech) {
-          const pos = DESK_LAYOUT[snapshot.speech.agent];
-          drawBubble(ctx, pos.x, pos.y, snapshot.speech.text);
+          const speaker = snapshot.speech.agent;
+          const seated = DESK_LAYOUT[speaker];
+          const dest = handoff ? DESK_LAYOUT[handoff.to] : seated;
+          const walking = Boolean(handoff && speaker === walkingId);
+          const x = walking ? seated.x + (dest.x - seated.x) * walkU : seated.x;
+          const y = walking ? seated.y + (dest.y - seated.y) * walkU : seated.y;
+          drawBubble(ctx, x, y, snapshot.speech.text);
         }
       }
       raf = requestAnimationFrame(loop);
@@ -382,6 +457,7 @@ export default function AgentOfficeView() {
           width={SCENE.width}
           height={SCENE.height}
           className="office-canvas"
+          data-testid="office-canvas"
         />
         <div className="office-scanlines" aria-hidden />
         <svg
@@ -426,7 +502,7 @@ export default function AgentOfficeView() {
                 className={assigned ? "office-label assigned" : "office-label"}
                 style={{
                   left: `${((desk.x + 8) / SCENE.width) * 100}%`,
-                  top: `${((desk.y + 21) / SCENE.height) * 100}%`,
+                  top: `${((desk.y + 24) / SCENE.height) * 100}%`,
                   borderColor: assigned ? "#e23b3b" : agent.jersey,
                 }}
               >

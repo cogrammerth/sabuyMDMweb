@@ -3,7 +3,7 @@ import LoginForm from "./LoginForm";
 
 export default function LoginPage() {
   return (
-    <div className="admin-shell">
+    <div className="admin-shell" data-testid="login-page">
       <header className="admin-top">
         <div>
           <p className="office-kicker">SABUY CALL · DEVICE OWNER</p>
