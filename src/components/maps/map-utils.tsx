@@ -22,19 +22,3 @@ export function FitToPoints({ points }: { points: Array<[number, number]> }) {
 
   return null;
 }
-
-export function relativeHeartbeat(iso: string | null): string {
-  if (!iso) return "—";
-  const ts = Date.parse(iso);
-  if (Number.isNaN(ts)) return "—";
-  const delta = Date.now() - ts;
-  const sec = Math.round(Math.abs(delta) / 1000);
-  const suffix = delta >= 0 ? "ago" : "from now";
-  if (sec < 45) return delta >= 0 ? "just now" : "soon";
-  const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ${suffix}`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ${suffix}`;
-  const day = Math.round(hr / 24);
-  return `${day}d ${suffix}`;
-}

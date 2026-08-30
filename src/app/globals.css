@@ -50,24 +50,157 @@ code {
   justify-content: space-between;
   align-items: flex-end;
   gap: 1rem;
+  min-width: 0;
+}
+
+.admin-brand {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .admin-top h1 {
   margin: 0.2rem 0 0;
   font-size: 1.6rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-top-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem 0.9rem;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-nav {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
   font-size: 0.85rem;
   opacity: 0.85;
+  min-width: 0;
+}
+
+.admin-nav a,
+.admin-nav button.nav-logout {
+  white-space: nowrap;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .admin-nav a[aria-current="page"] {
   color: #ffd36a;
   text-decoration: none;
   font-weight: 700;
+}
+
+.lang-dropdown {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.lang-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  background: #1b2430;
+  color: var(--foreground);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.lang-trigger:hover,
+.lang-trigger:focus-visible {
+  border-color: #5a4a20;
+  background: #2a2418;
+  color: #ffd36a;
+  outline: none;
+}
+
+.lang-caret {
+  font-size: 0.65rem;
+  opacity: 0.7;
+}
+
+.lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.4rem);
+  z-index: 40;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  min-width: 10.5rem;
+  background: #161d26;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.lang-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lang-option:hover,
+.lang-option.on {
+  background: #2a2418;
+  color: #ffd36a;
+}
+
+.home-shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  position: relative;
+}
+
+.home-lang {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+}
+
+.enroll-steps li {
+  display: grid;
+  gap: 0.2rem;
+  margin-bottom: 0.75rem;
+}
+
+.enroll-steps li strong {
+  display: block;
+}
+
+.summary-card p {
+  overflow-wrap: anywhere;
 }
 
 .admin-grid {
@@ -890,6 +1023,16 @@ textarea {
   .admin-top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .admin-top-tools {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .home-lang {
+    position: static;
+    align-self: flex-end;
   }
 
   .fleet-cards,

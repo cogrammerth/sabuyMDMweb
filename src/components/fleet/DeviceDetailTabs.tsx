@@ -3,19 +3,25 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import PolicyEditor from "@/components/fleet/PolicyEditor";
+import { useTranslation } from "@/context/LanguageContext";
 import type { PolicyResponse } from "@/types/mdm";
 
 const DeviceHistoryCanvas = dynamic(
   () => import("@/components/maps/DeviceHistoryCanvas"),
   {
     ssr: false,
-    loading: () => (
-      <div className="map-canvas history-map-canvas" data-testid="history-map-loading">
-        Loading history map…
-      </div>
-    ),
+    loading: () => <HistoryMapLoading />,
   }
 );
+
+function HistoryMapLoading() {
+  const { t } = useTranslation();
+  return (
+    <div className="map-canvas history-map-canvas" data-testid="history-map-loading">
+      {t("device.loadingHistory")}
+    </div>
+  );
+}
 
 export default function DeviceDetailTabs({
   deviceId,
@@ -24,6 +30,7 @@ export default function DeviceDetailTabs({
   deviceId: string;
   initial: PolicyResponse;
 }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"policy" | "history">("policy");
 
   return (
@@ -37,7 +44,7 @@ export default function DeviceDetailTabs({
           className={tab === "policy" ? "tab on" : "tab"}
           onClick={() => setTab("policy")}
         >
-          Policy
+          {t("device.tabPolicy")}
         </button>
         <button
           type="button"
@@ -47,7 +54,7 @@ export default function DeviceDetailTabs({
           className={tab === "history" ? "tab on" : "tab"}
           onClick={() => setTab("history")}
         >
-          Location history
+          {t("device.tabHistory")}
         </button>
       </div>
       {tab === "policy" ? (
@@ -55,8 +62,8 @@ export default function DeviceDetailTabs({
       ) : (
         <section className="panel history-panel">
           <header className="panel-head">
-            <h2>Movement log</h2>
-            <span>Polyline from location_logs, oldest → newest</span>
+            <h2 data-i18n="device.movementLog">{t("device.movementLog")}</h2>
+            <span data-i18n="device.movementHint">{t("device.movementHint")}</span>
           </header>
           <div className="map-canvas history-map-canvas">
             <DeviceHistoryCanvas deviceId={deviceId} />

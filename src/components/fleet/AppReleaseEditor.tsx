@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "@/context/LanguageContext";
 import type { AppVersionRecord, VersionInfo } from "@/types/mdm";
 
 type LoadState = {
@@ -9,6 +10,7 @@ type LoadState = {
 };
 
 export default function AppReleaseEditor() {
+  const { t } = useTranslation();
   const [loaded, setLoaded] = useState<LoadState | null>(null);
   const [versionCode, setVersionCode] = useState("2");
   const [versionName, setVersionName] = useState("1.1.0");
@@ -77,15 +79,15 @@ export default function AppReleaseEditor() {
         version?: AppVersionRecord;
       };
       if (!res.ok || body.success === false) {
-        setError(body.error ?? "Failed to publish release");
+        setError(body.error ?? t("settings.publishFailed"));
         return;
       }
       if (body.version) {
         setLoaded({ active: body.version, fallback: null });
       }
-      setToast("Release published. UpdateWorker picks this up on the next poll.");
+      setToast(t("settings.published"));
     } catch {
-      setError("Failed to publish release");
+      setError(t("settings.publishFailed"));
     } finally {
       setSaving(false);
     }
@@ -96,18 +98,18 @@ export default function AppReleaseEditor() {
   return (
     <section className="panel" data-testid="app-release-editor">
       <header className="panel-head">
-        <h2>App release channel</h2>
-        <span>Publishes the active row served by GET /api/version.json</span>
+        <h2 data-i18n="nav.appReleases">{t("nav.appReleases")}</h2>
+        <span data-i18n="settings.releaseSubtitle">{t("settings.releaseSubtitle")}</span>
       </header>
 
       {current ? (
         <div className="release-current" data-testid="app-release-current">
           <p className="hint">
-            Current channel:{" "}
+            {t("settings.currentChannel")}{" "}
             <strong>
               {current.versionName} ({current.versionCode})
             </strong>
-            {loaded?.active ? null : " · fallback constant (no DB row yet)"}
+            {loaded?.active ? null : ` · ${t("settings.fallbackNote")}`}
           </p>
           <p className="hint mono">{current.apkUrl}</p>
         </div>
@@ -115,7 +117,7 @@ export default function AppReleaseEditor() {
 
       <div className="form-grid">
         <label>
-          Version code
+          {t("settings.versionCode")}
           <input
             type="number"
             min={1}
@@ -126,7 +128,7 @@ export default function AppReleaseEditor() {
           />
         </label>
         <label>
-          Version name
+          {t("settings.versionName")}
           <input
             type="text"
             value={versionName}
@@ -135,7 +137,7 @@ export default function AppReleaseEditor() {
           />
         </label>
         <label className="span-2">
-          APK URL (HTTPS)
+          {t("settings.apkUrl")}
           <input
             type="url"
             value={apkUrl}
@@ -150,7 +152,7 @@ export default function AppReleaseEditor() {
             onChange={(event) => setIsMandatory(event.target.checked)}
             data-testid="app-release-mandatory"
           />
-          Mandatory update (blocks usage until installed)
+          {t("settings.mandatory")}
         </label>
       </div>
 
@@ -169,7 +171,7 @@ export default function AppReleaseEditor() {
           disabled={saving}
           data-testid="app-release-publish"
         >
-          {saving ? "Publishing…" : "Publish release"}
+          {saving ? t("settings.publishing") : t("settings.publish")}
         </button>
       </div>
     </section>

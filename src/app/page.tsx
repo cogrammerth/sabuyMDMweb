@@ -1,36 +1,35 @@
+"use client";
+
 import Link from "next/link";
+import LanguageSelector from "@/components/i18n/LanguageSelector";
+import { useTranslation } from "@/context/LanguageContext";
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
-    <main
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "0.75rem",
-        padding: "2rem",
-      }}
-    >
-      <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 600 }}>
-        Sabuy MDM Web Hub
+    <main className="home-shell">
+      <div className="home-lang">
+        <LanguageSelector />
+      </div>
+      <h1 style={{ margin: 0, fontSize: "1.75rem", fontWeight: 600 }} data-i18n="brand.title">
+        {t("brand.title")}
       </h1>
-      <p style={{ margin: 0, opacity: 0.7 }}>
-        Phase 4 — fleet map, location history, health checks
+      <p style={{ margin: 0, opacity: 0.7 }} data-i18n="brand.homeTagline">
+        {t("brand.homeTagline")}
       </p>
       <p style={{ margin: "0.5rem 0 0", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-        <Link href="/devices" style={{ color: "#6ee7a0" }}>
-          Fleet dashboard
+        <Link href="/devices" style={{ color: "#6ee7a0" }} data-i18n="home.fleetDashboard">
+          {t("home.fleetDashboard")}
         </Link>
-        <Link href="/map" style={{ color: "#7ee0a8" }}>
-          Fleet map
+        <Link href="/map" style={{ color: "#7ee0a8" }} data-i18n="home.fleetMap">
+          {t("home.fleetMap")}
         </Link>
-        <Link href="/provisioning" style={{ color: "#6ec8e7" }}>
-          Zero-Touch QR
+        <Link href="/provisioning" style={{ color: "#6ec8e7" }} data-i18n="home.zeroTouch">
+          {t("home.zeroTouch")}
         </Link>
-        <Link href="/admin" style={{ color: "#ffd36a" }}>
-          Agent office
+        <Link href="/admin" style={{ color: "#ffd36a" }} data-i18n="home.agentOffice">
+          {t("home.agentOffice")}
         </Link>
       </p>
       <ul style={{ marginTop: "1.5rem", lineHeight: 1.8, opacity: 0.85 }}>

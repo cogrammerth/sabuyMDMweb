@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Product | Sabuy MDM Web Hub |
-| Version | 0.5.0 (production readiness + automated smoke gate) |
-| Last updated | 2026-08-26 |
+| Version | 0.6.0 (bilingual i18n + production readiness) |
+| Last updated | 2026-08-30 |
 | Primary domain | `https://mdmweb.sabuycall.net` |
 | Repo package | `sabuycall-mdm-web` |
 | Audience | Android Device Owner (DPC) fleet + internal operators |
@@ -140,6 +140,9 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `src/lib/provisioning.ts` | APK checksum + Enterprise extras + QR data URL |
 | `src/app/provisioning/page.tsx` | Operator Zero-Touch QR console |
 | `src/lib/agents/**` | Multi-agent pipeline state, orchestrator, specialists |
+| `src/context/LanguageContext.tsx` | Operator language provider + `useTranslation` |
+| `src/locales/en.json`, `src/locales/th.json` | English / Thai dictionaries |
+| `src/components/i18n/**` | Language dropdown + translated page copy |
 | `src/components/agents/AgentOfficeView.tsx` | Kunio-kun pixel office widget |
 | `e2e/**`, `scripts/browser-loop.mjs` | Playwright / localhost QA loop |
 | `AGENTS.md`, `.cursor/rules/**` | Specialist desk boundaries |
@@ -704,6 +707,24 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 
 ---
 
+### Bilingual i18n (Thai / English) — **Completed**
+
+**Shipped**
+
+- [x] `LanguageProvider` + `useTranslation` (`src/context/LanguageContext.tsx`)
+- [x] Dictionaries `src/locales/th.json` / `src/locales/en.json` (navbar, metrics, 3-step QR enroll, device actions)
+- [x] Header language dropdown (`🇹🇭 ภาษาไทย` / `🇬🇧 English`); choice persisted in `localStorage` (`sabuy-mdm-locale`), default `th` with browser auto-detect
+- [x] Operator chrome on `/`, `/login`, `/devices`, `/map`, `/provisioning`, `/settings` uses `t('key')`
+- [x] Playwright i18n smoke: `e2e/i18n.spec.ts` (instant toggle, no missing keys, no Thai overflow)
+
+**Acceptance (met)**
+
+- Toggling language updates visible copy without a full page reload.
+- Missing keys fall back to English; both dictionaries share the same key set.
+- Thai labels wrap in the global header; pages must not grow a horizontal scrollbar.
+
+---
+
 ## 6. Environment & Secrets
 
 | Variable | Where | Public? |
@@ -829,6 +850,7 @@ Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks,
 
 | Date | Change |
 | --- | --- |
+| 2026-08-30 | Bilingual i18n (Thai / English): `LanguageProvider`, locale dictionaries, header language dropdown, Playwright i18n smoke |
 | 2026-08-26 | Production readiness: `app_versions`, device rename, `/settings`, mandatory smoke gate |
 | 2026-08-22 | Phase 4: fleet Leaflet map, location history, `/api/health`, security headers |
 | 2026-08-22 | Phase 3: Zero-Touch QR (`/provisioning`), computed APK checksum, download/print |

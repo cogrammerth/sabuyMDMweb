@@ -43,6 +43,10 @@ const KEYWORD_AGENTS: Array<{ pattern: RegExp; agents: AgentId[] }> = [
     pattern: /\b(test|playwright|e2e|browser)\b/i,
     agents: ["tester"],
   },
+  {
+    pattern: /\b(i18n|locale|bilingual|translation|ภาษา)\b/i,
+    agents: ["frontend", "tester"],
+  },
 ];
 
 const TASK_TEMPLATES: Record<Exclude<AgentId, "orchestrator">, (goal: string) => Pick<AgentTask, "title" | "description">> = {

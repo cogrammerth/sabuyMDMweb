@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import DeviceNameCell from "@/components/fleet/DeviceNameCell";
+import { useTranslation } from "@/context/LanguageContext";
+import { formatRelativeTime } from "@/lib/i18n";
 import { isDeviceOnline, LOW_BATTERY_THRESHOLD } from "@/lib/online";
 import type { FleetDevice } from "@/types/mdm";
 
@@ -11,22 +13,6 @@ export type DeviceRow = FleetDevice;
 function fmt(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") return "—";
   return String(value);
-}
-
-function relativeTime(iso: string | null): string {
-  if (!iso) return "—";
-  const ts = Date.parse(iso);
-  if (Number.isNaN(ts)) return "—";
-  const delta = Date.now() - ts;
-  const sec = Math.round(Math.abs(delta) / 1000);
-  const suffix = delta >= 0 ? "ago" : "from now";
-  if (sec < 45) return delta >= 0 ? "just now" : "soon";
-  const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ${suffix}`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ${suffix}`;
-  const day = Math.round(hr / 24);
-  return `${day}d ${suffix}`;
 }
 
 function matchesQuery(device: FleetDevice, query: string): boolean {
@@ -50,6 +36,7 @@ export default function DeviceTable({
   devices: FleetDevice[];
   showConfigure?: boolean;
 }) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "online" | "offline" | "low-battery">(
     "all"
@@ -82,25 +69,24 @@ export default function DeviceTable({
   return (
     <section className="panel" data-testid="device-table">
       <header className="panel-head">
-        <h2>Fleet</h2>
-        <span>
-          {rows.length} of {devices.length} device
-          {devices.length === 1 ? "" : "s"}
+        <h2 data-i18n="fleet.title">{t("fleet.title")}</h2>
+        <span data-i18n="fleet.count">
+          {t("fleet.count", { shown: rows.length, total: devices.length })}
         </span>
       </header>
       <div className="filter-bar">
         <label>
-          <span className="sr-only">Search devices</span>
+          <span className="sr-only">{t("fleet.search")}</span>
           <input
             data-testid="device-search"
             type="search"
-            placeholder="Search id, name, model…"
+            placeholder={t("fleet.searchPlaceholder")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
         <label>
-          <span className="sr-only">Filter status</span>
+          <span className="sr-only">{t("fleet.filterStatus")}</span>
           <select
             data-testid="device-filter"
             value={filter}
@@ -108,10 +94,10 @@ export default function DeviceTable({
               setFilter(event.target.value as typeof filter)
             }
           >
-            <option value="all">All</option>
-            <option value="online">Online</option>
-            <option value="offline">Offline</option>
-            <option value="low-battery">Low battery</option>
+            <option value="all">{t("fleet.filterAll")}</option>
+            <option value="online">{t("fleet.filterOnline")}</option>
+            <option value="offline">{t("fleet.filterOffline")}</option>
+            <option value="low-battery">{t("fleet.filterLowBattery")}</option>
           </select>
         </label>
       </div>
@@ -119,15 +105,19 @@ export default function DeviceTable({
         <table>
           <thead>
             <tr>
-              <th>Online</th>
-              <th>Device ID</th>
-              <th>Name</th>
-              <th>Model</th>
-              <th>Android</th>
-              <th>Battery</th>
-              <th>Free storage</th>
-              <th>Last heartbeat</th>
-              {showConfigure ? <th>Policy</th> : null}
+              <th data-i18n="metrics.healthStatus">{t("metrics.healthStatus")}</th>
+              <th data-testid="col-device-id" data-i18n="fleet.colDeviceId">
+                {t("fleet.colDeviceId")}
+              </th>
+              <th data-i18n="fleet.colName">{t("fleet.colName")}</th>
+              <th data-i18n="fleet.colModel">{t("fleet.colModel")}</th>
+              <th data-i18n="fleet.colAndroid">{t("fleet.colAndroid")}</th>
+              <th data-i18n="fleet.colBattery">{t("fleet.colBattery")}</th>
+              <th data-i18n="fleet.colStorage">{t("fleet.colStorage")}</th>
+              <th data-i18n="fleet.colHeartbeat">{t("fleet.colHeartbeat")}</th>
+              {showConfigure ? (
+                <th data-i18n="fleet.colPolicy">{t("fleet.colPolicy")}</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -135,8 +125,8 @@ export default function DeviceTable({
               <tr>
                 <td colSpan={colCount} className="empty">
                   {devices.length === 0
-                    ? "No heartbeats yet. Devices appear after POST /api/heartbeat."
-                    : "No devices match this search."}
+                    ? t("fleet.emptyNone")
+                    : t("fleet.emptyFilter")}
                 </td>
               </tr>
             ) : (
@@ -150,7 +140,7 @@ export default function DeviceTable({
                         className={online ? "badge-on" : "badge-off"}
                         data-online={online ? "true" : "false"}
                       >
-                        {online ? "ONLINE" : "OFFLINE"}
+                        {online ? t("fleet.online") : t("fleet.offline")}
                       </span>
                     </td>
                     <td>
@@ -198,7 +188,7 @@ export default function DeviceTable({
                       >
                         {now === null
                           ? device.lastHeartbeat ?? "—"
-                          : relativeTime(device.lastHeartbeat)}
+                          : formatRelativeTime(device.lastHeartbeat, t)}
                       </time>
                     </td>
                     {showConfigure ? (
@@ -208,7 +198,7 @@ export default function DeviceTable({
                           href={`/devices/${encodeURIComponent(device.deviceId)}`}
                           data-testid={`configure-${device.deviceId}`}
                         >
-                          Configure
+                          {t("fleet.configure")}
                         </Link>
                       </td>
                     ) : null}

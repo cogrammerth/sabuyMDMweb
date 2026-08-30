@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "@/context/LanguageContext";
 import type { ProvisioningExtras } from "@/types/mdm";
 
 type QrResponse = {
@@ -14,6 +15,7 @@ type QrResponse = {
 };
 
 export default function QrGenerator() {
+  const { t } = useTranslation();
   const [deviceId, setDeviceId] = useState("");
   const [leaveSystemApps, setLeaveSystemApps] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -35,17 +37,17 @@ export default function QrGenerator() {
       const body = (await res.json()) as QrResponse;
       if (!res.ok || body.success === false) {
         setResult(null);
-        setError(body.error ?? "Failed to generate QR");
+        setError(body.error ?? t("provisioning.generateFailed"));
         return;
       }
       setResult(body);
     } catch {
       setResult(null);
-      setError("Failed to generate QR");
+      setError(t("provisioning.generateFailed"));
     } finally {
       setBusy(false);
     }
-  }, [deviceId, leaveSystemApps]);
+  }, [deviceId, leaveSystemApps, t]);
 
   useEffect(() => {
     void generate();
@@ -65,16 +67,16 @@ export default function QrGenerator() {
     if (!result?.qrDataUrl) return;
     const win = window.open("", "_blank", "noopener,noreferrer,width=640,height=720");
     if (!win) return;
-    win.document.write(`<!doctype html><html><head><title>Sabuy Zero-Touch QR</title>
+    win.document.write(`<!doctype html><html><head><title>${t("provisioning.printTitle")}</title>
       <style>
         body{font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:1rem;padding:2rem;}
         img{width:360px;height:360px;image-rendering:pixelated;}
         code{font-size:12px;word-break:break-all;}
       </style></head><body>
-      <h1>Sabuy MDM Zero-Touch</h1>
-      <img src="${result.qrDataUrl}" alt="Provisioning QR" />
-      <p>Scan on a factory-reset Android device to become Device Owner.</p>
-      ${deviceId.trim() ? `<p>Pre-assigned deviceId: <code>${deviceId.trim()}</code></p>` : ""}
+      <h1>${t("provisioning.printTitle")}</h1>
+      <img src="${result.qrDataUrl}" alt="${t("provisioning.qrAlt")}" />
+      <p>${t("provisioning.printHint")}</p>
+      ${deviceId.trim() ? `<p>deviceId: <code>${deviceId.trim()}</code></p>` : ""}
       <script>window.onload=()=>{window.print();}</script>
       </body></html>`);
     win.document.close();
@@ -85,23 +87,23 @@ export default function QrGenerator() {
     try {
       await navigator.clipboard.writeText(result.payload);
     } catch {
-      setError("Could not copy extras JSON");
+      setError(t("provisioning.copyFailed"));
     }
   }
 
   return (
     <section className="panel" data-testid="qr-generator">
       <header className="panel-head">
-        <h2>Zero-Touch QR</h2>
+        <h2 data-i18n="provisioning.qrTitle">{t("provisioning.qrTitle")}</h2>
         <span>
           {result?.checksumSource
-            ? `Checksum: ${result.checksumSource}`
-            : "Checksum from published APK"}
+            ? t("provisioning.checksumSource", { source: result.checksumSource })
+            : t("provisioning.checksumFromApk")}
         </span>
       </header>
 
       <label className="pkg-field">
-        Optional pre-assigned device ID
+        {t("provisioning.deviceIdLabel")}
         <input
           data-testid="qr-device-id"
           value={deviceId}
@@ -117,7 +119,7 @@ export default function QrGenerator() {
           onChange={(event) => setLeaveSystemApps(event.target.checked)}
           data-testid="qr-leave-system-apps"
         />
-        Leave all system apps enabled
+        {t("provisioning.leaveSystemApps")}
       </label>
 
       <div className="qr-actions">
@@ -128,7 +130,7 @@ export default function QrGenerator() {
           disabled={busy}
           data-testid="qr-generate"
         >
-          {busy ? "Encoding…" : "Generate QR"}
+          {busy ? t("provisioning.encoding") : t("provisioning.generate")}
         </button>
         <button
           type="button"
@@ -137,7 +139,7 @@ export default function QrGenerator() {
           disabled={!result?.qrDataUrl}
           data-testid="qr-download"
         >
-          Download PNG
+          {t("provisioning.download")}
         </button>
         <button
           type="button"
@@ -146,7 +148,7 @@ export default function QrGenerator() {
           disabled={!result?.qrDataUrl}
           data-testid="qr-print"
         >
-          Print
+          {t("provisioning.print")}
         </button>
         <button
           type="button"
@@ -155,7 +157,7 @@ export default function QrGenerator() {
           disabled={!result?.payload}
           data-testid="qr-copy-json"
         >
-          Copy JSON
+          {t("provisioning.copyJson")}
         </button>
       </div>
 
@@ -164,16 +166,15 @@ export default function QrGenerator() {
           {error}
         </p>
       ) : (
-        <p className="hint">
-          QR encodes Android Enterprise extras. Checksum is SHA-256 (base64url)
-          of the published APK — not typed by hand.
+        <p className="hint" data-i18n="provisioning.hint">
+          {t("provisioning.hint")}
         </p>
       )}
 
       {result?.qrDataUrl ? (
-        <div className="qr-frame" data-testid="qr-preview" aria-label="Provisioning QR">
+        <div className="qr-frame" data-testid="qr-preview" aria-label={t("provisioning.qrAlt")}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={result.qrDataUrl} alt="Zero-Touch provisioning QR code" />
+          <img src={result.qrDataUrl} alt={t("provisioning.qrAlt")} />
         </div>
       ) : null}
 

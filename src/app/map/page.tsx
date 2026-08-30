@@ -1,22 +1,14 @@
-import OperatorNav from "@/components/fleet/OperatorNav";
+import OperatorHeader from "@/components/fleet/OperatorHeader";
 import FleetMapView from "@/components/maps/FleetMapView";
+import TranslatedHint from "@/components/i18n/TranslatedHint";
 
 export const dynamic = "force-dynamic";
 
 export default function FleetMapPage() {
   return (
     <div className="map-shell">
-      <header className="admin-top">
-        <div>
-          <p className="office-kicker">SABUY CALL · DEVICE OWNER</p>
-          <h1>Fleet map</h1>
-        </div>
-        <OperatorNav current="map" />
-      </header>
-      <p className="hint" role="note">
-        Latest GPS per device from <code>location_logs</code>. Green pins are
-        online (heartbeat within 15 minutes); gray pins are offline.
-      </p>
+      <OperatorHeader titleKey="pages.map" current="map" />
+      <TranslatedHint k="hints.map" />
       <div className="map-canvas" data-testid="fleet-map">
         <FleetMapView />
       </div>

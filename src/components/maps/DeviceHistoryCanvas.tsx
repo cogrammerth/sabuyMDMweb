@@ -10,17 +10,19 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DeviceLocationPoint } from "@/types/mdm";
+import { useTranslation } from "@/context/LanguageContext";
+import { formatRelativeTime } from "@/lib/i18n";
 import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
   FitToPoints,
-  relativeHeartbeat,
 } from "./map-utils";
 
 export default function DeviceHistoryCanvas({ deviceId }: { deviceId: string }) {
+  const { t } = useTranslation();
   const [locations, setLocations] = useState<DeviceLocationPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,13 +42,11 @@ export default function DeviceHistoryCanvas({ deviceId }: { deviceId: string }) 
         }
         if (!cancelled) {
           setLocations(body.locations ?? []);
-          setError(null);
+          setFailed(false);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load location history"
-          );
+          setFailed(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -70,17 +70,16 @@ export default function DeviceHistoryCanvas({ deviceId }: { deviceId: string }) 
   return (
     <div className="map-fill history-map-fill" data-testid="device-history-map">
       {loading ? (
-        <p className="map-overlay hint">Loading breadcrumbs…</p>
+        <p className="map-overlay hint">{t("map.loadingBreadcrumbs")}</p>
       ) : null}
-      {error ? (
+      {failed ? (
         <p className="map-overlay warn" role="alert">
-          {error}
+          {t("map.historyFailed")}
         </p>
       ) : null}
-      {!loading && !error && locations.length === 0 ? (
+      {!loading && !failed && locations.length === 0 ? (
         <p className="map-overlay hint" data-testid="history-map-empty">
-          No GPS breadcrumbs yet. Heartbeats with latitude and longitude appear
-          here as a route.
+          {t("map.historyEmpty")}
         </p>
       ) : null}
       <MapContainer
@@ -113,7 +112,9 @@ export default function DeviceHistoryCanvas({ deviceId }: { deviceId: string }) 
           >
             <Popup>
               <p className="map-popup-line">
-                Last fix {relativeHeartbeat(last.recordedAt)}
+                {t("map.lastFix", {
+                  when: formatRelativeTime(last.recordedAt, t),
+                })}
               </p>
               <p className="map-popup-line">
                 {last.latitude.toFixed(5)}, {last.longitude.toFixed(5)}

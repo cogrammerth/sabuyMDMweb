@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslation } from "@/context/LanguageContext";
 
 export default function LoginForm() {
+  const { t } = useTranslation();
   const router = useRouter();
   const search = useSearchParams();
   const next = search.get("next") || "/devices";
@@ -23,12 +25,12 @@ export default function LoginForm() {
       });
       const body = (await res.json()) as { success?: boolean; error?: string };
       if (!res.ok || body.success === false) {
-        setError(body.error ?? "Login failed");
+        setError(body.error ?? t("login.failed"));
         return;
       }
       router.replace(next.startsWith("/") ? next : "/devices");
     } catch {
-      setError("Login failed");
+      setError(t("login.failed"));
     } finally {
       setBusy(false);
     }
@@ -37,11 +39,11 @@ export default function LoginForm() {
   return (
     <form className="panel login-card" data-testid="login-form" onSubmit={(event) => void submit(event)}>
       <header className="panel-head">
-        <h2>Operator sign-in</h2>
-        <span>Shared password gate</span>
+        <h2 data-i18n="login.signInTitle">{t("login.signInTitle")}</h2>
+        <span data-i18n="login.signInSubtitle">{t("login.signInSubtitle")}</span>
       </header>
       <label className="pkg-field">
-        Password
+        {t("login.password")}
         <input
           data-testid="operator-password"
           type="password"
@@ -56,7 +58,7 @@ export default function LoginForm() {
         </p>
       ) : null}
       <button className="primary" type="submit" disabled={busy} data-testid="operator-login">
-        {busy ? "Signing in…" : "Sign in"}
+        {busy ? t("login.submitting") : t("login.submit")}
       </button>
     </form>
   );

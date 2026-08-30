@@ -4,18 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DeviceLatestLocation } from "@/types/mdm";
+import { useTranslation } from "@/context/LanguageContext";
+import { formatRelativeTime } from "@/lib/i18n";
 import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
   FitToPoints,
-  relativeHeartbeat,
 } from "./map-utils";
 import { statusDivIcon } from "./statusIcon";
 
 export default function FleetMapCanvas() {
+  const { t } = useTranslation();
   const [locations, setLocations] = useState<DeviceLatestLocation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,11 +36,11 @@ export default function FleetMapCanvas() {
         }
         if (!cancelled) {
           setLocations(body.locations ?? []);
-          setError(null);
+          setFailed(false);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load locations");
+          setFailed(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -62,17 +64,17 @@ export default function FleetMapCanvas() {
     <div className="map-fill" data-testid="leaflet-map">
       {loading ? (
         <p className="map-overlay hint" data-testid="fleet-map-loading">
-          Loading location data…
+          {t("map.loadingLocations")}
         </p>
       ) : null}
-      {error ? (
+      {failed ? (
         <p className="map-overlay warn" role="alert">
-          {error}
+          {t("map.loadFailed")}
         </p>
       ) : null}
-      {!loading && !error && locations.length === 0 ? (
+      {!loading && !failed && locations.length === 0 ? (
         <p className="map-overlay hint" data-testid="fleet-map-empty">
-          No GPS yet. Pins appear after heartbeats include latitude and longitude.
+          {t("map.empty")}
         </p>
       ) : null}
       <MapContainer
@@ -96,17 +98,17 @@ export default function FleetMapCanvas() {
             <Popup>
               <dl className="map-popup">
                 <div>
-                  <dt>Device ID</dt>
+                  <dt>{t("map.deviceId")}</dt>
                   <dd>
                     <code>{row.deviceId}</code>
                   </dd>
                 </div>
                 <div>
-                  <dt>Model</dt>
+                  <dt>{t("map.model")}</dt>
                   <dd>{row.model ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt>Battery</dt>
+                  <dt>{t("map.battery")}</dt>
                   <dd>
                     {row.batteryLevel === null || row.batteryLevel === undefined
                       ? "—"
@@ -114,10 +116,10 @@ export default function FleetMapCanvas() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Last heartbeat</dt>
+                  <dt>{t("map.lastHeartbeat")}</dt>
                   <dd>
                     <time dateTime={row.lastHeartbeat ?? undefined}>
-                      {relativeHeartbeat(row.lastHeartbeat)}
+                      {formatRelativeTime(row.lastHeartbeat, t)}
                     </time>
                   </dd>
                 </div>
@@ -126,18 +128,18 @@ export default function FleetMapCanvas() {
           </Marker>
         ))}
       </MapContainer>
-      <ul className="map-legend" aria-label="Marker legend">
+      <ul className="map-legend" aria-label={t("map.legend")}>
         <li>
           <span className="mdm-pin mdm-pin-online">
             <span className="mdm-pin-dot" />
           </span>
-          Online
+          {t("map.online")}
         </li>
         <li>
           <span className="mdm-pin mdm-pin-offline">
             <span className="mdm-pin-dot" />
           </span>
-          Offline
+          {t("map.offline")}
         </li>
       </ul>
     </div>

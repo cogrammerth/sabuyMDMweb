@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/context/LanguageContext";
 
 interface PolicyDraft {
   disableCamera: boolean;
@@ -20,23 +21,58 @@ const INITIAL: PolicyDraft = {
   kioskPackage: "",
 };
 
-const TOGGLES: Array<{ key: keyof Omit<PolicyDraft, "kioskPackage">; label: string; hint: string }> = [
-  { key: "disableCamera", label: "Disable camera", hint: "DevicePolicyManager camera restriction" },
-  { key: "disableFactoryReset", label: "Disable factory reset", hint: "Blocks wipe / FRP bypass" },
-  { key: "disableSafeBoot", label: "Disable safe boot", hint: "Blocks safe-mode DPC bypass" },
-  { key: "disableUsbDebugging", label: "Disable USB debugging", hint: "ADB off when tightened" },
-  { key: "kioskMode", label: "Kiosk / locktask", hint: "Requires a launchable package" },
+const TOGGLES: Array<{
+  key: keyof Omit<PolicyDraft, "kioskPackage">;
+  labelKey:
+    | "policy.disableCamera"
+    | "policy.disableFactoryReset"
+    | "policy.disableSafeBoot"
+    | "policy.disableUsbDebugging"
+    | "policy.kioskModePreview";
+  hintKey:
+    | "policy.disableCameraHint"
+    | "policy.disableFactoryResetHint"
+    | "policy.disableSafeBootHint"
+    | "policy.disableUsbDebuggingHint"
+    | "policy.kioskModePreviewHint";
+}> = [
+  {
+    key: "disableCamera",
+    labelKey: "policy.disableCamera",
+    hintKey: "policy.disableCameraHint",
+  },
+  {
+    key: "disableFactoryReset",
+    labelKey: "policy.disableFactoryReset",
+    hintKey: "policy.disableFactoryResetHint",
+  },
+  {
+    key: "disableSafeBoot",
+    labelKey: "policy.disableSafeBoot",
+    hintKey: "policy.disableSafeBootHint",
+  },
+  {
+    key: "disableUsbDebugging",
+    labelKey: "policy.disableUsbDebugging",
+    hintKey: "policy.disableUsbDebuggingHint",
+  },
+  {
+    key: "kioskMode",
+    labelKey: "policy.kioskModePreview",
+    hintKey: "policy.kioskModePreviewHint",
+  },
 ];
 
 export default function PolicyToggles() {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<PolicyDraft>(INITIAL);
   const kioskInvalid = draft.kioskMode && draft.kioskPackage.trim() === "";
 
   return (
     <section className="panel" data-testid="policy-toggles">
       <header className="panel-head">
-        <h2>Remote policy</h2>
-        <span>Preview — write path lands with operator auth</span>
+        <h2 data-i18n="policy.title">{t("policy.title")}</h2>
+        <span data-i18n="policy.previewSubtitle">{t("policy.previewSubtitle")}</span>
       </header>
       <ul className="toggle-list">
         {TOGGLES.map((item) => (
@@ -54,14 +90,14 @@ export default function PolicyToggles() {
               <span className="knob" />
             </button>
             <div>
-              <strong>{item.label}</strong>
-              <p>{item.hint}</p>
+              <strong>{t(item.labelKey)}</strong>
+              <p>{t(item.hintKey)}</p>
             </div>
           </li>
         ))}
       </ul>
       <label className="pkg-field">
-        Kiosk package
+        {t("policy.kioskPackageShort")}
         <input
           data-testid="kiosk-package"
           value={draft.kioskPackage}
@@ -74,7 +110,7 @@ export default function PolicyToggles() {
       </label>
       {kioskInvalid ? (
         <p className="warn" data-testid="kiosk-invariant">
-          Locktask on with an empty package is invalid. Security desk will reject it.
+          {t("policy.kioskInvariant")}
         </p>
       ) : null}
     </section>

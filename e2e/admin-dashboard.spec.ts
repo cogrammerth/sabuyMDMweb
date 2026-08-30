@@ -12,7 +12,7 @@ test.describe("Admin dashboard rendering", () => {
     await page.goto("/admin");
 
     await expect(page.getByTestId("device-table")).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Device ID" })).toBeVisible();
+    await expect(page.getByTestId("col-device-id")).toBeVisible();
 
     await expect(page.getByTestId("policy-toggles")).toBeVisible();
     const camera = page.getByTestId("policy-switch-disableCamera");

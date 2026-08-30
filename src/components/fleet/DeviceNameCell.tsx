@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/context/LanguageContext";
 
 export default function DeviceNameCell({
   deviceId,
@@ -9,6 +10,7 @@ export default function DeviceNameCell({
   deviceId: string;
   initialName: string | null;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(initialName);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(initialName ?? "");
@@ -45,14 +47,14 @@ export default function DeviceNameCell({
         device?: { deviceName?: string | null };
       };
       if (!res.ok || body.success === false) {
-        setError(body.error ?? "Failed to save name");
+        setError(body.error ?? t("device.renameFailed"));
         return;
       }
       const next = body.device?.deviceName ?? (draft.trim() || null);
       setName(next);
       setEditing(false);
     } catch {
-      setError("Failed to save name");
+      setError(t("device.renameFailed"));
     } finally {
       setSaving(false);
     }
@@ -65,7 +67,7 @@ export default function DeviceNameCell({
           type="text"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Friendly name"
+          placeholder={t("device.friendlyPlaceholder")}
           data-testid={`device-name-input-${deviceId}`}
           disabled={saving}
         />
@@ -77,7 +79,7 @@ export default function DeviceNameCell({
             disabled={saving}
             data-testid={`device-name-cancel-${deviceId}`}
           >
-            Cancel
+            {t("actions.cancel")}
           </button>
           <button
             type="button"
@@ -86,7 +88,7 @@ export default function DeviceNameCell({
             disabled={saving}
             data-testid={`device-name-save-${deviceId}`}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? t("actions.saving") : t("actions.save")}
           </button>
         </div>
         {error ? <p className="field-error">{error}</p> : null}
@@ -104,9 +106,9 @@ export default function DeviceNameCell({
         className="secondary name-edit-trigger"
         onClick={openEditor}
         data-testid={`device-name-edit-trigger-${deviceId}`}
-        aria-label={`Edit name for ${deviceId}`}
+        aria-label={`${t("actions.rename")} ${deviceId}`}
       >
-        Edit
+        {t("actions.rename")}
       </button>
     </div>
   );

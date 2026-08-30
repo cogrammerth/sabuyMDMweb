@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/context/LanguageContext";
 
 export default function AppListEditor({
   label,
@@ -15,6 +16,7 @@ export default function AppListEditor({
   onChange: (next: string[]) => void;
   placeholder: string;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
 
   function add() {
@@ -32,7 +34,7 @@ export default function AppListEditor({
       <strong>{label}</strong>
       <ul>
         {packages.length === 0 ? (
-          <li className="hint">None</li>
+          <li className="hint">{t("policy.none")}</li>
         ) : (
           packages.map((pkg) => (
             <li key={pkg}>
@@ -68,7 +70,7 @@ export default function AppListEditor({
           data-testid={`${testId}-add`}
           onClick={add}
         >
-          Add
+          {t("actions.add")}
         </button>
       </div>
     </div>

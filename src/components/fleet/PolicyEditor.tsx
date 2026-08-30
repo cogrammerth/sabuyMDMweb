@@ -2,18 +2,49 @@
 
 import { useState } from "react";
 import AppListEditor from "@/components/fleet/AppListEditor";
+import { useTranslation } from "@/context/LanguageContext";
 import type { PolicyResponse } from "@/types/mdm";
 
 const TOGGLES: Array<{
   key: keyof Omit<PolicyResponse, "kioskPackage" | "hiddenApps" | "suspendedApps">;
-  label: string;
-  hint: string;
+  labelKey:
+    | "policy.disableCamera"
+    | "policy.disableFactoryReset"
+    | "policy.disableSafeBoot"
+    | "policy.disableUsbDebugging"
+    | "policy.kioskMode";
+  hintKey:
+    | "policy.disableCameraHint"
+    | "policy.disableFactoryResetHint"
+    | "policy.disableSafeBootHint"
+    | "policy.disableUsbDebuggingHint"
+    | "policy.kioskModeHint";
 }> = [
-  { key: "disableCamera", label: "Disable camera", hint: "DevicePolicyManager camera restriction" },
-  { key: "disableFactoryReset", label: "Block factory reset", hint: "Blocks wipe / FRP bypass" },
-  { key: "disableSafeBoot", label: "Block safe boot", hint: "Blocks safe-mode DPC bypass" },
-  { key: "disableUsbDebugging", label: "Block USB debugging", hint: "ADB off when tightened" },
-  { key: "kioskMode", label: "Kiosk mode", hint: "Locktask — requires a launchable package" },
+  {
+    key: "disableCamera",
+    labelKey: "policy.disableCamera",
+    hintKey: "policy.disableCameraHint",
+  },
+  {
+    key: "disableFactoryReset",
+    labelKey: "policy.disableFactoryReset",
+    hintKey: "policy.disableFactoryResetHint",
+  },
+  {
+    key: "disableSafeBoot",
+    labelKey: "policy.disableSafeBoot",
+    hintKey: "policy.disableSafeBootHint",
+  },
+  {
+    key: "disableUsbDebugging",
+    labelKey: "policy.disableUsbDebugging",
+    hintKey: "policy.disableUsbDebuggingHint",
+  },
+  {
+    key: "kioskMode",
+    labelKey: "policy.kioskMode",
+    hintKey: "policy.kioskModeHint",
+  },
 ];
 
 export default function PolicyEditor({
@@ -23,6 +54,7 @@ export default function PolicyEditor({
   deviceId: string;
   initial: PolicyResponse;
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState<PolicyResponse>(initial);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -32,7 +64,7 @@ export default function PolicyEditor({
 
   async function save() {
     if (kioskInvalid) {
-      setError("kioskPackage is required when kioskMode is true");
+      setError(t("policy.kioskRequired"));
       return;
     }
     setSaving(true);
@@ -53,13 +85,13 @@ export default function PolicyEditor({
         policy?: PolicyResponse;
       };
       if (!res.ok || body.success === false) {
-        setError(body.error ?? "Failed to save policy");
+        setError(body.error ?? t("policy.saveFailed"));
         return;
       }
       if (body.policy) setDraft(body.policy);
-      setToast("Policy saved. Devices pick this up on the next PolicySyncWorker poll.");
+      setToast(t("policy.saved"));
     } catch {
-      setError("Failed to save policy");
+      setError(t("policy.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -68,8 +100,8 @@ export default function PolicyEditor({
   return (
     <section className="panel" data-testid="policy-toggles">
       <header className="panel-head">
-        <h2>Remote policy</h2>
-        <span>Writes `policies` and bumps updated_at</span>
+        <h2 data-i18n="actions.policyEditor">{t("actions.policyEditor")}</h2>
+        <span data-i18n="policy.subtitle">{t("policy.subtitle")}</span>
       </header>
       <ul className="toggle-list">
         {TOGGLES.map((item) => (
@@ -87,14 +119,14 @@ export default function PolicyEditor({
               <span className="knob" />
             </button>
             <div>
-              <strong>{item.label}</strong>
-              <p>{item.hint}</p>
+              <strong data-i18n={item.labelKey}>{t(item.labelKey)}</strong>
+              <p data-i18n={item.hintKey}>{t(item.hintKey)}</p>
             </div>
           </li>
         ))}
       </ul>
       <label className="pkg-field">
-        Target kiosk package
+        {t("policy.kioskPackage")}
         <input
           data-testid="kiosk-package"
           value={draft.kioskPackage}
@@ -106,21 +138,21 @@ export default function PolicyEditor({
         />
       </label>
       {kioskInvalid ? (
-        <p className="warn" data-testid="kiosk-invariant">
-          Locktask on with an empty package is invalid. Security desk will reject it.
+        <p className="warn" data-testid="kiosk-invariant" data-i18n="policy.kioskInvariant">
+          {t("policy.kioskInvariant")}
         </p>
       ) : null}
 
       <div className="app-lists">
         <AppListEditor
-          label="Hidden apps"
+          label={t("policy.hiddenApps")}
           testId="hidden-apps"
           packages={draft.hiddenApps}
           onChange={(hiddenApps) => setDraft((prev) => ({ ...prev, hiddenApps }))}
           placeholder="com.example.hidden"
         />
         <AppListEditor
-          label="Suspended apps"
+          label={t("policy.suspendedApps")}
           testId="suspended-apps"
           packages={draft.suspendedApps}
           onChange={(suspendedApps) =>
@@ -137,7 +169,7 @@ export default function PolicyEditor({
         onClick={() => void save()}
         disabled={saving || kioskInvalid}
       >
-        {saving ? "Saving…" : "Save policy"}
+        {saving ? t("actions.saving") : t("policy.save")}
       </button>
 
       {toast ? (
