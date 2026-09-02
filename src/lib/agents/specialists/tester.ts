@@ -180,7 +180,9 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
         "heartbeat-ingest",
         heartbeat.ok &&
           heartbeat.body.success === true &&
-          typeof heartbeat.body.timestamp === "number",
+          typeof heartbeat.body.timestamp === "number" &&
+          typeof heartbeat.body.updateAvailable === "boolean" &&
+          typeof heartbeat.body.latestVersionCode === "number",
         `POST /api/heartbeat → ${heartbeat.status}`
       )
     );
@@ -230,6 +232,29 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
   }
 
   try {
+    const upload = await fetch(`${base}/api/admin/releases/upload`, {
+      method: "POST",
+      cache: "no-store",
+    });
+    const uploadBody = (await upload.json()) as { success?: boolean; error?: string };
+    checks.push(
+      check(
+        "apk-upload-rejects-empty",
+        upload.status === 400 && uploadBody.success === false,
+        `POST /api/admin/releases/upload without APK → ${upload.status}`
+      )
+    );
+  } catch (error) {
+    checks.push(
+      check(
+        "apk-upload-rejects-empty",
+        false,
+        error instanceof Error ? error.message : "release upload unreachable"
+      )
+    );
+  }
+
+  try {
     const home = await fetch(`${base}`, { cache: "no-store" });
     checks.push(check("home", home.ok, `GET / → ${home.status}`));
   } catch (error) {
@@ -261,8 +286,15 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
     );
   }
 
-  for (const path of ["/devices", "/map", "/provisioning"] as const) {
-    const name = path === "/devices" ? "fleet-page" : path === "/map" ? "map-page" : "provisioning-page";
+  for (const path of ["/devices", "/map", "/provisioning", "/settings"] as const) {
+    const name =
+      path === "/devices"
+        ? "fleet-page"
+        : path === "/map"
+          ? "map-page"
+          : path === "/settings"
+            ? "settings-page"
+            : "provisioning-page";
     try {
       const res = await fetch(`${base}${path}`, {
         cache: "no-store",

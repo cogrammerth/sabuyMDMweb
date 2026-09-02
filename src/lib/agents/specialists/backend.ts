@@ -20,7 +20,12 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
   const version = readRepo("src/app/api/version.json/route.ts");
   const appVersions = readRepo("src/lib/app-versions.ts");
   const appVersionMigration = readRepo("supabase/migrations/002_app_versions.sql");
+  const apkReleaseMigration = readRepo("supabase/migrations/003_apk_releases.sql");
   const adminAppVersion = readRepo("src/app/api/admin/app-version/route.ts");
+  const adminReleases = readRepo("src/app/api/admin/releases/route.ts");
+  const adminReleaseUpload = readRepo("src/app/api/admin/releases/upload/route.ts");
+  const apkParse = readRepo("src/lib/apk-parse.ts");
+  const releasesHelper = readRepo("src/lib/releases.ts");
   const adminDeviceDetail = readRepo("src/app/api/admin/devices/[deviceId]/route.ts");
   const types = readRepo("src/types/mdm.ts");
   const supabase = readRepo("src/lib/supabase.ts");
@@ -79,6 +84,22 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
       "app_versions migration defines active release rows"
     ),
     check(
+      "heartbeat-version-compare",
+      Boolean(
+        heartbeat?.includes("currentAppVersionCode") &&
+          heartbeat.includes("updateAvailable") &&
+          heartbeat.includes("latestVersionCode")
+      ),
+      "POST /api/heartbeat stores currentAppVersionCode and compares to the active release"
+    ),
+    check(
+      "version-update-available",
+      Boolean(
+        version?.includes("currentAppVersionCode") && version.includes("updateAvailable")
+      ),
+      "GET /api/version.json compares currentAppVersionCode when supplied"
+    ),
+    check(
       "admin-app-version-put",
       Boolean(
         adminAppVersion?.includes("export async function PUT") &&
@@ -86,6 +107,39 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
           adminAppVersion.includes("requireOperatorJson")
       ),
       "PUT /api/admin/app-version publishes APK metadata"
+    ),
+    check(
+      "apk-release-upload",
+      Boolean(
+        adminReleaseUpload?.includes("export async function POST") &&
+          adminReleaseUpload.includes("uploadApkRelease") &&
+          adminReleaseUpload.includes("requireOperatorJson") &&
+          apkParse?.includes("app-info-parser") &&
+          releasesHelper?.includes("dpc-releases")
+      ),
+      "POST /api/admin/releases/upload parses APK and stores it in dpc-releases"
+    ),
+    check(
+      "apk-release-list",
+      Boolean(
+        adminReleases?.includes("export async function GET") &&
+          adminReleases.includes("listAppVersions") &&
+          adminReleases.includes("requireOperatorJson")
+      ),
+      "GET /api/admin/releases lists stored app_versions"
+    ),
+    check(
+      "apk-release-migration",
+      Boolean(
+        apkReleaseMigration?.includes("dpc-releases") &&
+          apkReleaseMigration.includes("current_app_version_code")
+      ),
+      "003_apk_releases.sql adds device version column and public dpc-releases bucket"
+    ),
+    check(
+      "version-compare-helper",
+      Boolean(appVersions?.includes("resolveUpdateAvailable")),
+      "app-versions helper compares client versionCode to the active channel"
     ),
     check(
       "admin-device-patch",
@@ -225,6 +279,9 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
         "/api/admin/provisioning/qr",
         "/api/admin/locations/latest",
         "/api/admin/devices/:deviceId/locations",
+        "/api/admin/app-version",
+        "/api/admin/releases",
+        "/api/admin/releases/upload",
         "/api/health",
       ],
     },

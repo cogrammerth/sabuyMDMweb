@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import DeviceNameCell from "@/components/fleet/DeviceNameCell";
+import StatusBadge from "@/components/ui/StatusBadge";
+import VersionIndicator from "@/components/fleet/VersionIndicator";
 import { useTranslation } from "@/context/LanguageContext";
 import { formatRelativeTime } from "@/lib/i18n";
 import { isDeviceOnline, LOW_BATTERY_THRESHOLD } from "@/lib/online";
@@ -32,9 +34,11 @@ function matchesQuery(device: FleetDevice, query: string): boolean {
 export default function DeviceTable({
   devices,
   showConfigure = false,
+  latestVersionCode = 1,
 }: {
   devices: FleetDevice[];
   showConfigure?: boolean;
+  latestVersionCode?: number;
 }) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
@@ -64,7 +68,7 @@ export default function DeviceTable({
     });
   }, [devices, query, filter]);
 
-  const colCount = showConfigure ? 9 : 8;
+  const colCount = showConfigure ? 10 : 9;
 
   return (
     <section className="panel" data-testid="device-table">
@@ -112,6 +116,7 @@ export default function DeviceTable({
               <th data-i18n="fleet.colName">{t("fleet.colName")}</th>
               <th data-i18n="fleet.colModel">{t("fleet.colModel")}</th>
               <th data-i18n="fleet.colAndroid">{t("fleet.colAndroid")}</th>
+              <th data-i18n="fleet.colAppVersion">{t("fleet.colAppVersion")}</th>
               <th data-i18n="fleet.colBattery">{t("fleet.colBattery")}</th>
               <th data-i18n="fleet.colStorage">{t("fleet.colStorage")}</th>
               <th data-i18n="fleet.colHeartbeat">{t("fleet.colHeartbeat")}</th>
@@ -136,12 +141,10 @@ export default function DeviceTable({
                 return (
                   <tr key={device.deviceId} data-testid={`device-row-${device.deviceId}`}>
                     <td>
-                      <span
-                        className={online ? "badge-on" : "badge-off"}
-                        data-online={online ? "true" : "false"}
-                      >
-                        {online ? t("fleet.online") : t("fleet.offline")}
-                      </span>
+                      <StatusBadge
+                        online={online}
+                        lastHeartbeat={device.lastHeartbeat}
+                      />
                     </td>
                     <td>
                       <code>{device.deviceId}</code>
@@ -154,6 +157,13 @@ export default function DeviceTable({
                     </td>
                     <td>{fmt(device.model)}</td>
                     <td>{fmt(device.androidVersion)}</td>
+                    <td>
+                      <VersionIndicator
+                        currentCode={device.currentAppVersionCode}
+                        latestCode={latestVersionCode}
+                        testId={`device-version-${device.deviceId}`}
+                      />
+                    </td>
                     <td>
                       {level === null ? (
                         "—"

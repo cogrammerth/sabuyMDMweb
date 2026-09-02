@@ -17,6 +17,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["app-info-parser"],
+  experimental: {
+    middlewareClientMaxBodySize: "80mb",
+  },
   async headers() {
     return [
       {

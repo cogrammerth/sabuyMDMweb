@@ -1,9 +1,10 @@
 import { getDevice } from "@/lib/devices";
+import { getActiveVersionInfo } from "@/lib/app-versions";
 import { DEFAULT_POLICY, getPolicy } from "@/lib/policies";
 import { isDeviceOnline } from "@/lib/online";
 import DeviceDetailTabs from "@/components/fleet/DeviceDetailTabs";
 import DeviceIdentity from "@/components/fleet/DeviceIdentity";
-import OperatorHeader from "@/components/fleet/OperatorHeader";
+import AppShell from "@/components/layout/AppShell";
 import BackToFleet from "./BackToFleet";
 import MissingDeviceId from "./MissingDeviceId";
 
@@ -14,18 +15,42 @@ type PageProps = { params: Promise<{ deviceId: string }> };
 export default async function DevicePolicyPage({ params }: PageProps) {
   const { deviceId: raw } = await params;
   const deviceId = decodeURIComponent(raw ?? "").trim();
-  const [device, policy] = await Promise.all([
-    deviceId ? getDevice(deviceId) : Promise.resolve(null),
-    deviceId ? getPolicy(deviceId) : Promise.resolve(null),
-  ]).catch(() => [null, null] as const);
+  let device = null;
+  let policy = null;
+  let latestVersionCode = 1;
+  if (deviceId) {
+    try {
+      const [loadedDevice, loadedPolicy, active] = await Promise.all([
+        getDevice(deviceId),
+        getPolicy(deviceId),
+        getActiveVersionInfo(),
+      ]);
+      device = loadedDevice;
+      policy = loadedPolicy;
+      latestVersionCode = active.versionCode;
+    } catch {
+      device = null;
+      policy = null;
+    }
+  } else {
+    try {
+      latestVersionCode = (await getActiveVersionInfo()).versionCode;
+    } catch {
+      latestVersionCode = 1;
+    }
+  }
 
   const online = isDeviceOnline(device?.lastHeartbeat ?? null);
 
   return (
-    <div className="admin-shell">
-      <OperatorHeader titleKey="pages.devicePolicy" current="fleet" />
+    <AppShell titleKey="pages.devicePolicy" current="fleet">
       <BackToFleet />
-      <DeviceIdentity deviceId={deviceId} device={device} online={online} />
+      <DeviceIdentity
+        deviceId={deviceId}
+        device={device}
+        online={online}
+        latestVersionCode={latestVersionCode}
+      />
       {deviceId ? (
         <DeviceDetailTabs
           deviceId={deviceId}
@@ -34,6 +59,6 @@ export default async function DevicePolicyPage({ params }: PageProps) {
       ) : (
         <MissingDeviceId />
       )}
-    </div>
+    </AppShell>
   );
 }

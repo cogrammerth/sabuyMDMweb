@@ -57,11 +57,12 @@ test.describe("Bilingual i18n engine", () => {
     expect(flattenKeys(th).sort()).toEqual(flattenKeys(en).sort());
     expect(flattenKeys(en)).toEqual(
       expect.arrayContaining([
+        "nav.dashboard",
         "nav.fleet",
         "nav.map",
         "nav.zeroTouch",
         "nav.appReleases",
-        "nav.settings",
+        "nav.office",
         "nav.logout",
         "metrics.totalDevices",
         "metrics.online",
@@ -120,11 +121,17 @@ test.describe("Bilingual i18n engine", () => {
       await assertNoMissingKeys(page);
       await assertNoHorizontalOverflow(page);
 
+      if (route === "/") {
+        await expect(page.getByTestId("page-title")).toHaveText("ภาพรวมระบบ");
+        await expect(page.getByTestId("exec-dashboard")).toBeVisible();
+        await expect(page.getByTestId("quick-actions")).toBeVisible();
+        await expect(page.locator("body")).not.toContainText("POST /api/heartbeat");
+      }
       if (route === "/login") {
         await expect(page.getByTestId("page-title")).toHaveText("ประตูผู้ปฏิบัติงาน");
       }
       if (route === "/devices") {
-        await expect(page.getByTestId("page-title")).toHaveText("แดชบอร์ดกองยาน");
+        await expect(page.getByTestId("page-title")).toHaveText("จัดการอุปกรณ์");
         await expect(page.getByTestId("summary-total")).toContainText(
           "อุปกรณ์ทั้งหมด"
         );
@@ -155,11 +162,15 @@ test.describe("Bilingual i18n engine", () => {
       await assertNoMissingKeys(page);
       await assertNoHorizontalOverflow(page);
 
+      if (route === "/") {
+        await expect(page.getByTestId("page-title")).toHaveText("Dashboard");
+        await expect(page.getByTestId("exec-dashboard")).toBeVisible();
+      }
       if (route === "/login") {
         await expect(page.getByTestId("page-title")).toHaveText("Operator gate");
       }
       if (route === "/devices") {
-        await expect(page.getByTestId("page-title")).toHaveText("Fleet dashboard");
+        await expect(page.getByTestId("page-title")).toHaveText("Fleet Management");
         await expect(page.getByTestId("summary-total")).toContainText(
           "Total devices"
         );

@@ -9,6 +9,7 @@ export interface Device {
   is_device_owner: boolean;
   is_online: boolean;
   last_heartbeat: string | null;
+  current_app_version_code: number | null;
   created_at: string;
 }
 
@@ -33,6 +34,7 @@ export interface HeartbeatPayload {
   storageFreeMb: number;
   latitude?: number;
   longitude?: number;
+  currentAppVersionCode?: number;
 }
 
 export interface LocationLog {
@@ -81,6 +83,14 @@ export interface VersionInfo {
   versionName: string;
   apkUrl: string;
   isMandatory: boolean;
+  updateAvailable?: boolean;
+}
+
+export interface HeartbeatResponse {
+  success: true;
+  timestamp: number;
+  updateAvailable: boolean;
+  latestVersionCode: number;
 }
 
 /** Operator-facing APK release row (camelCase HTTP boundary). */
@@ -92,6 +102,10 @@ export interface AppVersionRecord {
   isMandatory: boolean;
   isActive: boolean;
   releasedAt: string;
+  packageName?: string | null;
+  fileSizeBytes?: number | null;
+  sha256?: string | null;
+  storagePath?: string | null;
 }
 
 /** Operator publish body for PUT /api/admin/app-version. */
@@ -100,6 +114,10 @@ export interface AppVersionWriteInput {
   versionName: string;
   apkUrl: string;
   isMandatory?: boolean;
+  packageName?: string | null;
+  fileSizeBytes?: number | null;
+  sha256?: string | null;
+  storagePath?: string | null;
 }
 
 /** Operator device rename body for PATCH /api/admin/devices/:deviceId. */
@@ -118,6 +136,7 @@ export interface FleetDevice {
   isDeviceOwner: boolean;
   isOnline: boolean;
   lastHeartbeat: string | null;
+  currentAppVersionCode: number | null;
   createdAt: string;
 }
 
@@ -176,6 +195,7 @@ type DeviceInsert = {
   is_device_owner?: boolean;
   is_online?: boolean;
   last_heartbeat?: string | null;
+  current_app_version_code?: number | null;
   created_at?: string;
 };
 
@@ -190,6 +210,7 @@ type DeviceUpdate = {
   is_device_owner?: boolean;
   is_online?: boolean;
   last_heartbeat?: string | null;
+  current_app_version_code?: number | null;
   created_at?: string;
 };
 
@@ -243,6 +264,10 @@ type AppVersionInsert = {
   is_mandatory?: boolean;
   is_active?: boolean;
   released_at?: string;
+  package_name?: string | null;
+  file_size_bytes?: number | null;
+  sha256?: string | null;
+  storage_path?: string | null;
 };
 
 type AppVersionUpdate = {
@@ -253,6 +278,10 @@ type AppVersionUpdate = {
   is_mandatory?: boolean;
   is_active?: boolean;
   released_at?: string;
+  package_name?: string | null;
+  file_size_bytes?: number | null;
+  sha256?: string | null;
+  storage_path?: string | null;
 };
 
 /**
@@ -275,6 +304,7 @@ export type Database = {
           is_device_owner: boolean;
           is_online: boolean;
           last_heartbeat: string | null;
+          current_app_version_code: number | null;
           created_at: string;
         };
         Insert: DeviceInsert;
@@ -319,6 +349,10 @@ export type Database = {
           is_mandatory: boolean;
           is_active: boolean;
           released_at: string;
+          package_name: string | null;
+          file_size_bytes: number | null;
+          sha256: string | null;
+          storage_path: string | null;
         };
         Insert: AppVersionInsert;
         Update: AppVersionUpdate;

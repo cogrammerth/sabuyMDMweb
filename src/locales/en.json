@@ -2,15 +2,17 @@
   "brand": {
     "kicker": "SABUY CALL · DEVICE OWNER",
     "title": "Sabuy MDM Web Hub",
-    "homeTagline": "Phase 4 — fleet map, location history, health checks"
+    "homeTagline": "Enterprise Device Owner console for the Sabuy Call fleet"
   },
   "nav": {
-    "fleet": "Fleet",
-    "map": "Map",
+    "dashboard": "Dashboard",
+    "fleet": "Fleet Management",
+    "map": "Live Map",
     "zeroTouch": "Zero-Touch QR",
     "appReleases": "App Releases",
     "settings": "Settings",
     "logout": "Logout",
+    "office": "Agent Office",
     "console": "Console",
     "api": "API",
     "backToFleet": "← Fleet"
@@ -21,10 +23,10 @@
     "english": "English"
   },
   "home": {
-    "fleetDashboard": "Fleet dashboard",
-    "fleetMap": "Fleet map",
+    "fleetDashboard": "Fleet Management",
+    "fleetMap": "Live Map",
     "zeroTouch": "Zero-Touch QR",
-    "agentOffice": "Agent office"
+    "agentOffice": "Agent Office"
   },
   "login": {
     "title": "Operator gate",
@@ -38,24 +40,30 @@
     "failed": "Login failed"
   },
   "pages": {
-    "fleet": "Fleet dashboard",
-    "map": "Fleet map",
-    "provisioning": "Zero-Touch provisioning",
-    "settings": "Settings",
-    "console": "MDM Web Hub",
+    "dashboard": "Dashboard",
+    "fleet": "Fleet Management",
+    "map": "Live Map",
+    "provisioning": "Zero-Touch QR",
+    "settings": "App Releases",
+    "console": "Agent Office",
+    "office": "Agent Office",
     "devicePolicy": "Device policy"
   },
   "hints": {
-    "fleet": "Online means last_heartbeat within 15 minutes. Low battery is under 20%. Agent office still lives on the console. Fleet map plots the latest GPS pin per device.",
-    "map": "Latest GPS per device from location_logs. Green pins are online (heartbeat within 15 minutes); gray pins are offline.",
-    "provisioning": "Scan the QR on a factory-reset device. Set DPC_COMPONENT_NAME, DPC_APK_URL, and host the APK so the checksum is computed from real bytes. Local/CI may use fixtures/provisioning-apk-stub.bin.",
-    "settings": "Publish APK metadata without redeploying the hub. Devices poll GET /api/version.json from UpdateWorker.",
-    "console": "Policy writes live on the fleet dashboard. Zero-Touch QR lives on /provisioning. Set OPERATOR_PASSWORD before publishing admin routes."
+    "fleet": "Online means a heartbeat within 15 minutes. Low battery is under 20%. Use search and filters to find a device, then open policy from Configure.",
+    "map": "Latest GPS pin per device. Green is online (heartbeat within 15 minutes); gray is offline.",
+    "provisioning": "Scan the QR on a factory-reset Android device. The APK checksum is computed from the published file, not typed by hand.",
+    "settings": "Publish APK metadata without redeploying the hub. Drop an APK to parse version metadata, store it in the dpc-releases bucket, and activate it for UpdateWorker.",
+    "console": "Dispatch a goal to the specialist desks. Policy writes and Zero-Touch QR also live on Fleet and Provisioning."
   },
   "metrics": {
     "totalDevices": "Total devices",
     "online": "Online",
     "offline": "Offline",
+    "pending": "Pending / syncing",
+    "systemHealth": "System health",
+    "healthy": "Healthy",
+    "unhealthy": "Unhealthy",
     "healthStatus": "Health status",
     "battery": "Battery",
     "lowBattery": "Low battery (<20%)"
@@ -74,6 +82,7 @@
     "colName": "Name",
     "colModel": "Model",
     "colAndroid": "Android",
+    "colAppVersion": "App version",
     "colBattery": "Battery",
     "colStorage": "Free storage",
     "colHeartbeat": "Last heartbeat",
@@ -81,14 +90,20 @@
     "emptyNone": "No heartbeats yet. Devices appear after POST /api/heartbeat.",
     "emptyFilter": "No devices match this search.",
     "configure": "Configure",
-    "online": "ONLINE",
-    "offline": "OFFLINE"
+    "online": "Online",
+    "offline": "Offline",
+    "syncing": "Syncing",
+    "versionCurrent": "Up to date",
+    "versionOutdated": "Update available",
+    "versionUnknown": "Unknown",
+    "versionLabel": "v{code}"
   },
   "device": {
     "awaiting": "AWAITING HEARTBEAT",
     "name": "Name",
     "model": "Model",
     "android": "Android",
+    "appVersion": "App version",
     "battery": "Battery",
     "storage": "Free storage",
     "noHeartbeat": "No heartbeat row yet. Policy can still be saved — PolicySyncWorker may run before the first heartbeat.",
@@ -110,7 +125,8 @@
     "cancel": "Cancel",
     "saving": "Saving…",
     "edit": "Edit",
-    "add": "Add"
+    "add": "Add",
+    "close": "Close"
   },
   "policy": {
     "title": "Remote policy",
@@ -176,7 +192,19 @@
     "publish": "Publish release",
     "publishing": "Publishing…",
     "published": "Release published. UpdateWorker picks this up on the next poll.",
-    "publishFailed": "Failed to publish release"
+    "publishFailed": "Failed to publish release",
+    "uploadTitle": "Upload APK",
+    "uploadHint": "Drop a .apk here or click to browse. Version code and name are read from the package.",
+    "uploading": "Uploading and parsing APK…",
+    "uploaded": "APK uploaded to dpc-releases and published as the active channel.",
+    "uploadFailed": "Failed to upload APK",
+    "releasesTitle": "Active releases",
+    "releasesEmpty": "No stored releases yet. Upload an APK or publish by URL.",
+    "activate": "Activate",
+    "activated": "This release is now the active UpdateWorker channel.",
+    "activeBadge": "Active",
+    "publishByUrl": "Publish by URL",
+    "publishByUrlHint": "Use this if the APK is already hosted at an HTTPS URL."
   },
   "map": {
     "loading": "Loading fleet map…",
@@ -194,6 +222,22 @@
     "historyFailed": "Failed to load location history",
     "historyEmpty": "No GPS breadcrumbs yet. Heartbeats with latitude and longitude appear here as a route.",
     "lastFix": "Last fix {when}"
+  },
+  "dash": {
+    "quickActions": "Quick actions",
+    "enroll": "Generate enrollment QR",
+    "enrollHint": "Factory-reset a device and scan to become Device Owner.",
+    "inspectMap": "Inspect live map",
+    "inspectMapHint": "See the latest GPS pin for every reporting device.",
+    "publishApk": "Update APK release",
+    "publishApkHint": "Publish version metadata without redeploying the hub.",
+    "recentActivity": "Recent activity",
+    "recentEmpty": "No heartbeats yet. Devices appear after they check in.",
+    "activityHeartbeat": "Heartbeat"
+  },
+  "modal": {
+    "renameTitle": "Rename device",
+    "policyTitle": "Adjust policy"
   },
   "time": {
     "justNow": "just now",

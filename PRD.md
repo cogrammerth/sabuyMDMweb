@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Product | Sabuy MDM Web Hub |
-| Version | 0.6.0 (bilingual i18n + production readiness) |
-| Last updated | 2026-08-30 |
+| Version | 0.8.0 (in-hub APK releases + version compare) |
+| Last updated | 2026-09-02 |
 | Primary domain | `https://mdmweb.sabuycall.net` |
 | Repo package | `sabuycall-mdm-web` |
 | Audience | Android Device Owner (DPC) fleet + internal operators |
@@ -33,7 +33,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | App & API | Next.js 15 App Router + TypeScript + React 19 | Pages + Route Handlers |
 | Database | Supabase (PostgreSQL) | Devices, policies, location logs |
 | DNS / TLS / proxy | Cloudflare | `mdmweb.sabuycall.net` |
-| Hosting | Railway | Node process (`next start`) |
+| Hosting | VPS (`next start` behind Cloudflare) | Node process |
 | Styling (Phase 2+) | Tailwind CSS 4 | Admin UI |
 
 ### 1.3 In scope / out of scope
@@ -51,7 +51,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 - Google Android Management API / Play EMM.
 - End-user self-service portal.
 - Push command channel (lock / wipe / reboot) — deferred; policy pull + heartbeat is the Phase 1–2 control loop.
-- Storing APK binaries in this repo (host at `apkUrl` instead).
+- Storing APK binaries in this git repo (host in Supabase Storage `dpc-releases` or at `apkUrl` instead).
 
 ### 1.4 Design principles
 
@@ -82,12 +82,13 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
            │
            ▼
 ┌─────────────────────────────────┐
-│  Railway — Next.js App          │
+│  App host — Next.js (`next start`) │
 │  App Router pages (admin UI)    │
 │  Route Handlers:                │
 │    POST /api/heartbeat          │
 │    GET  /api/policy             │
 │    GET  /api/version.json       │
+│    POST /api/admin/releases/upload │
 │    PUT  /api/admin/app-version  │
 │    GET  /api/admin/devices      │
 │    PUT  /api/admin/devices/:id/policy
@@ -104,6 +105,12 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 │  location_logs      │
 │  app_versions       │
 └─────────────────────┘
+           │
+           ▼
+┌─────────────────────┐
+│  Supabase Storage   │
+│  bucket dpc-releases│
+└─────────────────────┘
 ```
 
 ### 2.1 Runtime data flow
@@ -112,7 +119,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | --- | --- | --- | --- |
 | `HeartbeatWorker` | Client → Hub | `POST /api/heartbeat` | Upsert `devices`; optional insert `location_logs` |
 | `PolicySyncWorker` | Hub → Client | `GET /api/policy?deviceId=` | Read/insert `policies` |
-| `UpdateWorker` | Hub → Client | `GET /api/version.json` | Active row from `app_versions` (file/constant fallback) |
+| `UpdateWorker` | Hub → Client | `GET /api/version.json` | Active row from `app_versions` (file/constant fallback). Optional `?currentAppVersionCode=` adds `updateAvailable`. |
 
 ### 2.2 Source map (Phase 1)
 
@@ -123,8 +130,9 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `src/app/api/version.json/route.ts` | APK metadata |
 | `src/app/api/admin/devices/**` | Operator fleet list, device detail, policy PUT, location history |
 | `src/app/api/admin/locations/latest/route.ts` | Latest GPS pin per device |
-| `src/app/api/health/route.ts` | Railway/Cloudflare liveness + DB ping |
+| `src/app/api/health/route.ts` | Host / Cloudflare liveness + DB ping |
 | `src/lib/locations.ts` | Latest/history location queries (camelCase) |
+| `src/app/page.tsx` | Executive operator dashboard (metrics, quick actions, recent activity) |
 | `src/app/map/page.tsx` | Fleet Leaflet map (dynamic import, SSR-off) |
 | `src/lib/devices.ts` | Fleet list/get; `isOnline` from `last_heartbeat` |
 | `src/lib/policies.ts` | Policy map, kiosk validation, upsert |
@@ -136,7 +144,9 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `.env.example` | Required env var names |
 | `src/app/devices/page.tsx` | Fleet dashboard |
 | `src/app/devices/[deviceId]/page.tsx` | Device policy editor |
-| `src/app/api/admin/provisioning/**` | Zero-Touch QR config + encode |
+| `src/app/api/admin/releases/**` | In-hub APK upload to Storage `dpc-releases` + release list |
+| `src/lib/apk-parse.ts` | APK metadata via `app-info-parser` |
+| `src/lib/releases.ts` | Storage upload + publish to `app_versions` |
 | `src/lib/provisioning.ts` | APK checksum + Enterprise extras + QR data URL |
 | `src/app/provisioning/page.tsx` | Operator Zero-Touch QR console |
 | `src/lib/agents/**` | Multi-agent pipeline state, orchestrator, specialists |
@@ -159,7 +169,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 - Error shape (when `success: false`): `{ "success": false, "error": "<message>" }`.
 - Policy success responses are a **flat camelCase object** (no `{ success, data }` wrapper) so the Android client can deserialize directly.
 - `version.json` is likewise a flat object.
-- Heartbeat success: `{ "success": true, "timestamp": <epoch_ms> }`.
+- Heartbeat success: `{ "success": true, "timestamp": <epoch_ms>, "updateAvailable": <bool>, "latestVersionCode": <number> }`.
 - **Phase 1 APIs are unauthenticated.** Treat the public URL as a trusted fleet channel until a later revision adds a device token / HMAC.
 - **Admin APIs require the operator gate.** `OPERATOR_PASSWORD` issues an httpOnly session cookie (or `Authorization: Bearer`). In local development, if the password is unset the gate stays open so Playwright can run. Production refuses admin routes until the password is set.
 
@@ -184,7 +194,8 @@ Content-Type: application/json
   "batteryLevel": 0,
   "storageFreeMb": 0,
   "latitude": 13.7563,
-  "longitude": 100.5018
+  "longitude": 100.5018,
+  "currentAppVersionCode": 12
 }
 ```
 
@@ -197,12 +208,14 @@ Content-Type: application/json
 | `storageFreeMb` | number | No | Finite number only; otherwise `null`. |
 | `latitude` | number | No | Must be finite and in `[-90, 90]`. |
 | `longitude` | number | No | Must be finite and in `[-180, 180]`. |
+| `currentAppVersionCode` | number | No | Integer ≥ 0. Stored as `devices.current_app_version_code`. Ignored if missing/invalid so older clients keep working. |
 
 Location is recorded **only if both** `latitude` and `longitude` are valid numbers. Invalid GPS is ignored; heartbeat still succeeds.
 
 **Server side-effects**
 
-- `devices` upsert (`onConflict: device_id`): sets `is_online = true`, `last_heartbeat = now()`.
+- `devices` upsert (`onConflict: device_id`): sets `is_online = true`, `last_heartbeat = now()`. If `currentAppVersionCode` is a valid integer, also sets `current_app_version_code`.
+- Compares the reported code to the active `app_versions.version_code` and returns `updateAvailable` / `latestVersionCode`.
 - Does **not** currently set `device_name` or `is_device_owner` (columns exist for Phase 2).
 - There is **no** background job yet that flips `is_online` to `false` after a timeout.
 
@@ -210,7 +223,7 @@ Location is recorded **only if both** `latitude` and `longitude` are valid numbe
 
 | Status | Body | When |
 | --- | --- | --- |
-| 200 | `{ "success": true, "timestamp": 1710000000000 }` | Upsert (and optional location insert) OK |
+| 200 | `{ "success": true, "timestamp": 1710000000000, "updateAvailable": false, "latestVersionCode": 15 }` | Upsert (and optional location insert) OK |
 | 400 | `{ "success": false, "error": "Invalid JSON body" }` | Body is not JSON |
 | 400 | `{ "success": false, "error": "deviceId is required" }` | Missing/blank `deviceId` |
 | 500 | `{ "success": false, "error": "Failed to update device heartbeat" }` | Devices upsert failed |
@@ -288,6 +301,7 @@ Returns APK metadata for background auto-updates (`UpdateWorker`).
 
 ```http
 GET /api/version.json
+GET /api/version.json?currentAppVersionCode=12
 ```
 
 **Success body (200)**
@@ -307,10 +321,11 @@ GET /api/version.json
 | `versionName` | string | Display version. |
 | `apkUrl` | string | HTTPS URL of the APK. |
 | `isMandatory` | boolean | If true, client should block usage until updated. |
+| `updateAvailable` | boolean | Present only when `currentAppVersionCode` is supplied. `true` when remote `versionCode` is greater. |
 
 **Headers:** `Cache-Control: no-store, max-age=0` so workers never cache a stale APK pointer.
 
-**Current implementation:** `GET /api/version.json` reads the active `app_versions` row (`is_active = true`). If the table is missing or empty, it falls back to `data/app-version-active.json` then `DEFAULT_VERSION_INFO`. Operators publish a new APK channel with `PUT /api/admin/app-version` (no code deploy).
+**Current implementation:** `GET /api/version.json` reads the active `app_versions` row (`is_active = true`). If the table is missing or empty, it falls back to `data/app-version-active.json` then `DEFAULT_VERSION_INFO`. Operators publish by uploading an APK (`POST /api/admin/releases/upload`) or by URL (`PUT /api/admin/app-version`). Optional query `currentAppVersionCode` adds `updateAvailable`.
 
 **Error:** unexpected exceptions still return **200 + fallback constants** so UpdateWorker is not bricked. `500 { "success": false }` is not used on this route.
 
@@ -338,6 +353,7 @@ JSON at the HTTP boundary is **camelCase**. `isOnline` is **computed** from `las
       "isDeviceOwner": false,
       "isOnline": true,
       "lastHeartbeat": "2026-08-22T04:00:00.000Z",
+      "currentAppVersionCode": 12,
       "createdAt": "2026-08-22T04:00:00.000Z"
     }
   ],
@@ -494,7 +510,34 @@ Operator-gated publish. Deactivates the previous active row, upserts on `version
 }
 ```
 
-`apkUrl` must be HTTPS. `versionCode` must be a positive integer.
+`apkUrl` must be HTTPS (http is allowed only for localhost). `versionCode` must be a positive integer.
+
+### 3.10 In-hub APK upload (Supabase Storage)
+
+Operator-gated. Parses the APK with `app-info-parser`, uploads bytes to bucket `dpc-releases`, and publishes the active `app_versions` row.
+
+#### `GET /api/admin/releases`
+
+Returns `{ success, active, releases, fallback }` — the active channel plus stored rows ordered by `versionCode` descending.
+
+#### `POST /api/admin/releases/upload`
+
+`multipart/form-data`:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| `apk` (or `file`) | **Yes** | `.apk` file, ZIP magic, max 80MB |
+| `isMandatory` | No | `"true"` / `"1"` / `"on"` |
+
+**Success:** `{ "success": true, "version": { …AppVersionRecord } }`
+
+| Status | When |
+| --- | --- |
+| 400 | Missing file, not an APK, or parser could not read `versionCode` / `versionName` |
+| 401 | Operator gate required |
+| 503 | Storage bucket `dpc-releases` missing or upload failed |
+
+The public object URL becomes `apkUrl`. `versionCode` / `versionName` / `package` come from the APK, not from operator-typed fields.
 
 #### `PATCH /api/admin/devices/:deviceId`
 
@@ -530,6 +573,7 @@ RLS is **enabled** on all tables with **no anon/authenticated policies**. The Ne
 | `is_device_owner` | boolean | NOT NULL, default `false` | Not set by heartbeat yet |
 | `is_online` | boolean | NOT NULL, default `false` | Set `true` on heartbeat |
 | `last_heartbeat` | timestamptz | nullable | Set on heartbeat |
+| `current_app_version_code` | integer | nullable | From heartbeat `currentAppVersionCode` (`003_apk_releases.sql`) |
 | `created_at` | timestamptz | NOT NULL, default `now()` | |
 
 **Index:** `devices_last_heartbeat_idx` on `last_heartbeat DESC`.
@@ -573,7 +617,7 @@ Because of the FK, a heartbeat **must** upsert `devices` before inserting locati
 
 ### 4.4 `public.app_versions`
 
-Canonical SQL: `supabase/migrations/002_app_versions.sql`. RLS enabled, no anon grants. Served by `GET /api/version.json`; written by `PUT /api/admin/app-version`.
+Canonical SQL: `supabase/migrations/002_app_versions.sql` plus extras in `003_apk_releases.sql`. RLS enabled, no anon grants. Served by `GET /api/version.json`; written by `PUT /api/admin/app-version` and `POST /api/admin/releases/upload`.
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -584,6 +628,12 @@ Canonical SQL: `supabase/migrations/002_app_versions.sql`. RLS enabled, no anon 
 | `is_mandatory` | boolean | NOT NULL, default `false` |
 | `is_active` | boolean | Operator-published channel; `GET /api/version.json` reads the active row |
 | `released_at` | timestamptz | default `now()` |
+| `package_name` | text | From APK parser (`003`) |
+| `file_size_bytes` | bigint | Uploaded byte length (`003`) |
+| `sha256` | text | Hex SHA-256 of the APK (`003`) |
+| `storage_path` | text | Object path in bucket `dpc-releases` (`003`) |
+
+**Storage:** public bucket `dpc-releases` (public read, service-role write). APK binaries are **not** stored in git.
 
 ---
 
@@ -595,7 +645,7 @@ Canonical SQL: `supabase/migrations/002_app_versions.sql`. RLS enabled, no anon 
 | **2** | Fleet Dashboard & Remote Policy UI | **Completed** | Operator console: list devices, edit policy, mark online |
 | **3** | Zero-Touch QR Provisioning Generator | **Completed** | Encode DPC extras into a scannable QR for factory reset / new devices |
 | **4** | Geo-Tracking Maps & Railway Production Hardening | **Completed** | Map view of `location_logs`; healthcheck; security headers |
-| **5** | Production readiness & smoke gate | **Completed** | `app_versions` channel, device rename, mandatory Playwright smoke |
+| **6** | In-hub APK releases | **Completed** | Upload APK to `dpc-releases`, parse metadata, compare device version codes |
 
 Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase 4 is **hardening** (env, health checks, APK hosting, online-timeout job), not “first deploy ever.”
 
@@ -611,7 +661,7 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 - [x] `POST /api/heartbeat`
 - [x] `GET /api/policy?deviceId=`
 - [x] `GET /api/version.json` (active `app_versions` row with file/constant fallback)
-- [x] Placeholder home page listing the three endpoints
+- [x] Executive dashboard on `/` (metrics, quick actions, recent activity)
 - [x] `/admin` console shell (fleet table, policy toggles, QR preview, agent office)
 
 **Not in Phase 1 (known gaps)**
@@ -685,7 +735,6 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 
 - Retention job for old `location_logs`.
 - Device token on heartbeat/policy to stop anonymous fleet spam.
-- Host APK at a stable URL (`/apk/sabuy-mdm.apk` or object storage) if not already on the CDN.
 
 ---
 
@@ -704,6 +753,26 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 - Publishing APK metadata updates the next `UpdateWorker` poll without a hub redeploy.
 - Friendly `device_name` is editable from `/devices` and persisted.
 - QA desk cannot sign off unless health, policy/version handshake, heartbeat upsert, UI loads, and Zero-Touch QR are green.
+
+---
+
+### In-hub APK releases — **Completed**
+
+**Shipped**
+
+- [x] `app-info-parser` parses uploaded APK `versionCode` / `versionName` / package
+- [x] `POST /api/admin/releases/upload` stores the binary in Supabase bucket `dpc-releases` and upserts `app_versions`
+- [x] `GET /api/admin/releases` lists stored channels; `/settings` has a drop zone + active-release list
+- [x] Heartbeat stores `currentAppVersionCode` and returns `updateAvailable` / `latestVersionCode`
+- [x] `GET /api/version.json?currentAppVersionCode=` adds `updateAvailable`
+- [x] `/devices` (and device identity) show up-to-date / outdated / unknown version badges
+- [x] Migration `003_apk_releases.sql` (device version column, extra release metadata, public bucket)
+
+**Acceptance (met)**
+
+- Operators can publish a new DPC APK from the hub without hosting the file in git.
+- Devices that report a lower `currentAppVersionCode` are flagged as outdated on the fleet table.
+- `UpdateWorker` still consumes the same flat `version.json` object; `updateAvailable` is additive.
 
 ---
 
@@ -748,7 +817,7 @@ npm install
 npm run dev
 ```
 
-Apply `supabase/migrations/001_mdm_phase1.sql` in the Supabase SQL editor if tables are missing.
+Apply `supabase/migrations/001_mdm_phase1.sql`, `002_app_versions.sql`, and `003_apk_releases.sql` in the Supabase SQL editor if tables or the `dpc-releases` bucket are missing.
 
 ---
 
@@ -770,9 +839,9 @@ The Android DPC is a **separate codebase**. This hub assumes:
 
 | Worker | Interval (suggested) | Behavior |
 | --- | --- | --- |
-| `HeartbeatWorker` | 5–15 min | POST heartbeat; include GPS when permission/location available |
+| `HeartbeatWorker` | 5–15 min | POST heartbeat; include GPS when available; send `currentAppVersionCode` |
 | `PolicySyncWorker` | 5–15 min | GET policy; apply DevicePolicyManager restrictions |
-| `UpdateWorker` | 6–24 h | GET version.json; if `versionCode` higher, download `apkUrl` and install (Device Owner silent install) |
+| `UpdateWorker` | 6–24 h | GET version.json (optional `?currentAppVersionCode=`); if `versionCode` higher, download `apkUrl` and install (Device Owner silent install) |
 
 `deviceId` must be stable across reboots (Android ID, or an ID written at provisioning time).
 
@@ -789,7 +858,7 @@ Resolve before or during Phase 2:
 3. **DPC identity:** default `net.sabuycall.mdm/.DeviceAdminReceiver` — freeze in Android repo and override `DPC_COMPONENT_NAME` when final.
 4. **Heartbeat auth:** when to require a provisioning-time token?
 5. **Multi-tenant:** one global fleet, or policies grouped by store/branch?
-6. **APK hosting:** Railway public folder vs. Cloudflare R2 vs. GitHub Releases?
+6. **APK hosting:** **Decided — Supabase Storage bucket `dpc-releases`** (public read for UpdateWorker). URL publish remains as a fallback.
 
 ---
 
@@ -838,8 +907,8 @@ Live Chromium (`scripts/browser-loop.mjs`) runs only when `ALLOW_AGENT_BROWSER=1
 
 1. `GET /api/health` → 200, `healthy`, DB `connected`
 2. `GET /api/version.json` and `GET /api/policy?deviceId=test-device-01` return valid payloads
-3. `POST /api/heartbeat` with mock GPS/battery → 200 and upserts fleet + location
-4. `/login`, `/devices`, `/map`, `/provisioning` load without uncaught console errors or 500s; unauthenticated UI redirects to `/login` when the operator gate is required
+3. `POST /api/heartbeat` with mock GPS/battery (and optional `currentAppVersionCode`) → 200, upserts fleet + location, returns `updateAvailable`
+4. `/login`, `/devices`, `/map`, `/provisioning`, `/settings` load without uncaught console errors or 500s; unauthenticated UI redirects to `/login` when the operator gate is required
 5. Fleet table search/filter responds; Zero-Touch QR renders without runtime exceptions
 
 Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks, typing vs idle, paper-packet handoff, speech bubble).
@@ -850,6 +919,8 @@ Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks,
 
 | Date | Change |
 | --- | --- |
+| 2026-09-02 | In-hub APK releases: Storage `dpc-releases`, upload parser, heartbeat/version compare, fleet version badges |
+| 2026-09-02 | Operator console UX: executive dashboard on `/`, sidebar app shell, status badges, rename modal; Thai default locale |
 | 2026-08-30 | Bilingual i18n (Thai / English): `LanguageProvider`, locale dictionaries, header language dropdown, Playwright i18n smoke |
 | 2026-08-26 | Production readiness: `app_versions`, device rename, `/settings`, mandatory smoke gate |
 | 2026-08-22 | Phase 4: fleet Leaflet map, location history, `/api/health`, security headers |

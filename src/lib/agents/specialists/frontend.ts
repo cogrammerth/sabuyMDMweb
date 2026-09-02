@@ -89,6 +89,13 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
         "App release management card present"
       )
     );
+    checks.push(
+      check(
+        "apk-upload-zone",
+        html.includes('data-testid="apk-upload-zone"'),
+        "APK upload drop zone present on /settings"
+      )
+    );
   } catch (error) {
     checks.push(
       check(
@@ -141,6 +148,13 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
         "device-name-edit",
         html.includes("device-name-edit-trigger-"),
         "Inline device name editor present on fleet table"
+      )
+    );
+    checks.push(
+      check(
+        "device-version-indicator",
+        html.includes('data-i18n="fleet.colAppVersion"'),
+        "Fleet table includes an app version column"
       )
     );
   } catch (error) {

@@ -1,23 +1,22 @@
 "use client";
 
 import { useTranslation } from "@/context/LanguageContext";
+import StatusBadge from "@/components/ui/StatusBadge";
+import VersionIndicator from "@/components/fleet/VersionIndicator";
 import type { FleetDevice } from "@/types/mdm";
 
 export default function DeviceIdentity({
   deviceId,
   device,
   online,
+  latestVersionCode = 1,
 }: {
   deviceId: string;
   device: FleetDevice | null;
   online: boolean;
+  latestVersionCode?: number;
 }) {
   const { t } = useTranslation();
-  const status = !device
-    ? t("device.awaiting")
-    : online
-      ? t("fleet.online")
-      : t("fleet.offline");
 
   return (
     <section className="panel" data-testid="device-identity">
@@ -25,7 +24,11 @@ export default function DeviceIdentity({
         <h2>
           <code>{deviceId || "unknown"}</code>
         </h2>
-        <span className={device && online ? "badge-on" : "badge-off"}>{status}</span>
+        <StatusBadge
+          online={online}
+          lastHeartbeat={device?.lastHeartbeat}
+          awaiting={!device}
+        />
       </header>
       <dl className="identity-grid">
         <div>
@@ -39,6 +42,16 @@ export default function DeviceIdentity({
         <div>
           <dt data-i18n="device.android">{t("device.android")}</dt>
           <dd>{device?.androidVersion ?? "—"}</dd>
+        </div>
+        <div>
+          <dt data-i18n="device.appVersion">{t("device.appVersion")}</dt>
+          <dd>
+            <VersionIndicator
+              currentCode={device?.currentAppVersionCode}
+              latestCode={latestVersionCode}
+              testId={device ? `device-version-${device.deviceId}` : "device-version-unknown"}
+            />
+          </dd>
         </div>
         <div>
           <dt data-i18n="device.battery">{t("device.battery")}</dt>

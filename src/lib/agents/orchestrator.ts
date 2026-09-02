@@ -36,7 +36,7 @@ const KEYWORD_AGENTS: Array<{ pattern: RegExp; agents: AgentId[] }> = [
     agents: ["backend", "frontend", "security", "tester"],
   },
   {
-    pattern: /\b(production readiness|app.?version|device.?name|fleet control|app_versions)\b/i,
+    pattern: /\b(production readiness|app.?version|device.?name|fleet control|app_versions|apk|releases?|dpc-releases|storage)\b/i,
     agents: ["backend", "frontend", "security", "tester"],
   },
   {

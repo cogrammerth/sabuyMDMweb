@@ -1,18 +1,28 @@
 import { listDevices } from "@/lib/devices";
+import { getActiveVersionInfo } from "@/lib/app-versions";
 import AdminDashboard from "@/components/fleet/AdminDashboard";
 import type { FleetDevice } from "@/types/mdm";
 
 export const dynamic = "force-dynamic";
 
-async function loadDevices(): Promise<FleetDevice[]> {
+async function loadDevices(): Promise<{
+  devices: FleetDevice[];
+  latestVersionCode: number;
+}> {
   try {
-    return await listDevices();
+    const [devices, active] = await Promise.all([
+      listDevices(),
+      getActiveVersionInfo(),
+    ]);
+    return { devices, latestVersionCode: active.versionCode };
   } catch {
-    return [];
+    return { devices: [], latestVersionCode: 1 };
   }
 }
 
 export default async function AdminPage() {
-  const devices = await loadDevices();
-  return <AdminDashboard devices={devices} />;
+  const { devices, latestVersionCode } = await loadDevices();
+  return (
+    <AdminDashboard devices={devices} latestVersionCode={latestVersionCode} />
+  );
 }

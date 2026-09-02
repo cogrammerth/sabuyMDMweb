@@ -30,7 +30,9 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
   const checks: CheckResult[] = [];
   const migration = readRepo("supabase/migrations/001_mdm_phase1.sql") ?? "";
   const appVersionMigration = readRepo("supabase/migrations/002_app_versions.sql") ?? "";
+  const apkReleaseMigration = readRepo("supabase/migrations/003_apk_releases.sql") ?? "";
   const adminAppVersion = readRepo("src/app/api/admin/app-version/route.ts") ?? "";
+  const adminReleaseUpload = readRepo("src/app/api/admin/releases/upload/route.ts") ?? "";
   const adminDeviceDetail = readRepo("src/app/api/admin/devices/[deviceId]/route.ts") ?? "";
   const appVersions = readRepo("src/lib/app-versions.ts") ?? "";
   const supabase = readRepo("src/lib/supabase.ts") ?? "";
@@ -166,6 +168,31 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
       "app-version-gated",
       adminAppVersion.includes("requireOperatorJson"),
       "PUT /api/admin/app-version requires the operator gate"
+    )
+  );
+  checks.push(
+    check(
+      "apk-upload-gated",
+      adminReleaseUpload.includes("requireOperatorJson") &&
+        adminReleaseUpload.includes("uploadApkRelease"),
+      "POST /api/admin/releases/upload requires the operator gate"
+    )
+  );
+  checks.push(
+    check(
+      "dpc-releases-public-read",
+      apkReleaseMigration.includes("dpc-releases") &&
+        /for select/i.test(apkReleaseMigration) &&
+        !/grant\s+(insert|all).*to\s+(anon|authenticated)/i.test(apkReleaseMigration),
+      "dpc-releases is public-read; anon is not granted write"
+    )
+  );
+  checks.push(
+    check(
+      "apk-not-in-repo",
+      !apkReleaseMigration.includes("fixtures/") &&
+        adminReleaseUpload.includes("uploadApkRelease"),
+      "APK binaries are stored in Supabase Storage, not git"
     )
   );
   checks.push(

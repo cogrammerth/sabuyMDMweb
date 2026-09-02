@@ -38,9 +38,6 @@ export function detectLocale(): Locale {
   } catch {
     /* private mode / blocked storage */
   }
-  const nav = (window.navigator.language || "").toLowerCase();
-  if (nav.startsWith("th")) return "th";
-  if (nav.startsWith("en")) return "en";
   return DEFAULT_LOCALE;
 }
 

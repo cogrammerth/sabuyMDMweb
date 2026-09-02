@@ -25,6 +25,10 @@ type AppVersionRow = {
   is_mandatory: boolean;
   is_active: boolean;
   released_at: string;
+  package_name?: string | null;
+  file_size_bytes?: number | null;
+  sha256?: string | null;
+  storage_path?: string | null;
 };
 
 function isMissingTableError(error: { code?: string; message?: string }): boolean {
@@ -32,6 +36,14 @@ function isMissingTableError(error: { code?: string; message?: string }): boolea
     error.code === "42P01" ||
     error.code === "PGRST205" ||
     Boolean(error.message?.includes("app_versions"))
+  );
+}
+
+function isMissingColumnError(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    /package_name|file_size_bytes|sha256|storage_path/i.test(error.message ?? "")
   );
 }
 
@@ -53,7 +65,38 @@ function toRecord(row: AppVersionRow): AppVersionRecord {
     isMandatory: row.is_mandatory,
     isActive: row.is_active,
     releasedAt: row.released_at,
+    packageName: row.package_name ?? null,
+    fileSizeBytes: row.file_size_bytes ?? null,
+    sha256: row.sha256 ?? null,
+    storagePath: row.storage_path ?? null,
   };
+}
+
+export function resolveUpdateAvailable(
+  currentAppVersionCode: number | null | undefined,
+  latestVersionCode: number
+): boolean {
+  if (
+    currentAppVersionCode === null ||
+    currentAppVersionCode === undefined ||
+    !Number.isFinite(currentAppVersionCode)
+  ) {
+    return false;
+  }
+  return latestVersionCode > currentAppVersionCode;
+}
+
+function isAllowedApkUrl(url: string): boolean {
+  if (/^https:\/\/.+/i.test(url)) return true;
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "http:" &&
+      (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
 }
 
 function readFileVersion(): VersionInfo | null {
@@ -177,7 +220,7 @@ function validateWriteInput(input: AppVersionWriteInput): VersionInfo {
   if (!apkUrl) {
     throw new AppVersionValidationError("apkUrl is required");
   }
-  if (!/^https:\/\/.+/i.test(apkUrl)) {
+  if (!isAllowedApkUrl(apkUrl)) {
     throw new AppVersionValidationError("apkUrl must be an HTTPS URL");
   }
 
@@ -189,10 +232,47 @@ function validateWriteInput(input: AppVersionWriteInput): VersionInfo {
   };
 }
 
+type PublishPayload = VersionInfo & {
+  packageName?: string | null;
+  fileSizeBytes?: number | null;
+  sha256?: string | null;
+  storagePath?: string | null;
+};
+
+function coreUpsertRow(payload: PublishPayload) {
+  return {
+    version_code: payload.versionCode,
+    version_name: payload.versionName,
+    apk_url: payload.apkUrl,
+    is_mandatory: payload.isMandatory,
+    is_active: true,
+    released_at: new Date().toISOString(),
+  };
+}
+
+function fullUpsertRow(payload: PublishPayload) {
+  return {
+    ...coreUpsertRow(payload),
+    package_name: payload.packageName ?? null,
+    file_size_bytes: payload.fileSizeBytes ?? null,
+    sha256: payload.sha256 ?? null,
+    storage_path: payload.storagePath ?? null,
+  };
+}
+
 export async function publishAppVersion(
   input: AppVersionWriteInput
 ): Promise<AppVersionRecord> {
-  const payload = validateWriteInput(input);
+  const payload: PublishPayload = {
+    ...validateWriteInput(input),
+    packageName: input.packageName ?? null,
+    fileSizeBytes:
+      typeof input.fileSizeBytes === "number" && Number.isFinite(input.fileSizeBytes)
+        ? Math.round(input.fileSizeBytes)
+        : null,
+    sha256: input.sha256 ?? null,
+    storagePath: input.storagePath ?? null,
+  };
   const supabase = getSupabaseAdmin();
 
   const { error: deactivateError } = await supabase
@@ -209,21 +289,13 @@ export async function publishAppVersion(
     return writeFileVersion(payload);
   }
 
-  const { data, error } = await supabase
-    .from("app_versions")
-    .upsert(
-      {
-        version_code: payload.versionCode,
-        version_name: payload.versionName,
-        apk_url: payload.apkUrl,
-        is_mandatory: payload.isMandatory,
-        is_active: true,
-        released_at: new Date().toISOString(),
-      },
-      { onConflict: "version_code" }
-    )
-    .select("*")
-    .single();
+  const attempt = async (row: ReturnType<typeof fullUpsertRow> | ReturnType<typeof coreUpsertRow>) =>
+    supabase.from("app_versions").upsert(row, { onConflict: "version_code" }).select("*").single();
+
+  let { data, error } = await attempt(fullUpsertRow(payload));
+  if (error && isMissingColumnError(error)) {
+    ({ data, error } = await attempt(coreUpsertRow(payload)));
+  }
 
   if (error) {
     if (isMissingTableError(error)) {
@@ -235,4 +307,32 @@ export async function publishAppVersion(
 
   writeFileVersion(payload);
   return toRecord(data as AppVersionRow);
+}
+
+export async function listAppVersions(): Promise<AppVersionRecord[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("app_versions")
+      .select("*")
+      .order("version_code", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      if (isMissingTableError(error)) {
+        const file = readFileVersion();
+        return file ? [fileToRecord(file)] : [];
+      }
+      console.error("[app-versions] list failed:", error);
+      throw new Error("Failed to list app versions");
+    }
+
+    return (data ?? []).map((row) => toRecord(row as AppVersionRow));
+  } catch (error) {
+    if (error instanceof Error && error.message === "Failed to list app versions") {
+      throw error;
+    }
+    console.error("[app-versions] list unexpected:", error);
+    throw new Error("Failed to list app versions");
+  }
 }

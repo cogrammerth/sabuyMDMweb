@@ -2,15 +2,17 @@
   "brand": {
     "kicker": "SABUY CALL · DEVICE OWNER",
     "title": "Sabuy MDM Web Hub",
-    "homeTagline": "เฟส 4 — แผนที่กองยาน ประวัติตำแหน่ง และการตรวจสุขภาพระบบ"
+    "homeTagline": "คอนโซล Device Owner สำหรับกองยาน Sabuy Call"
   },
   "nav": {
-    "fleet": "กองยาน",
-    "map": "แผนที่",
-    "zeroTouch": "QR Zero-Touch",
+    "dashboard": "ภาพรวมระบบ",
+    "fleet": "จัดการอุปกรณ์",
+    "map": "แผนที่ติดตาม",
+    "zeroTouch": "ลงทะเบียนด่วน",
     "appReleases": "เวอร์ชันแอป",
     "settings": "ตั้งค่า",
     "logout": "ออกจากระบบ",
+    "office": "สถานะเอเจนต์",
     "console": "คอนโซล",
     "api": "API",
     "backToFleet": "← กองยาน"
@@ -21,10 +23,10 @@
     "english": "English"
   },
   "home": {
-    "fleetDashboard": "แดชบอร์ดกองยาน",
-    "fleetMap": "แผนที่กองยาน",
-    "zeroTouch": "QR Zero-Touch",
-    "agentOffice": "สำนักงานเอเจนต์"
+    "fleetDashboard": "จัดการอุปกรณ์",
+    "fleetMap": "แผนที่ติดตาม",
+    "zeroTouch": "ลงทะเบียนด่วน",
+    "agentOffice": "สถานะเอเจนต์"
   },
   "login": {
     "title": "ประตูผู้ปฏิบัติงาน",
@@ -38,24 +40,30 @@
     "failed": "เข้าสู่ระบบไม่สำเร็จ"
   },
   "pages": {
-    "fleet": "แดชบอร์ดกองยาน",
-    "map": "แผนที่กองยาน",
-    "provisioning": "ลงทะเบียน Zero-Touch",
-    "settings": "ตั้งค่า",
-    "console": "MDM Web Hub",
+    "dashboard": "ภาพรวมระบบ",
+    "fleet": "จัดการอุปกรณ์",
+    "map": "แผนที่ติดตาม",
+    "provisioning": "ลงทะเบียนด่วน",
+    "settings": "เวอร์ชันแอป",
+    "console": "สถานะเอเจนต์",
+    "office": "สถานะเอเจนต์",
     "devicePolicy": "นโยบายอุปกรณ์"
   },
   "hints": {
-    "fleet": "ออนไลน์หมายถึง last_heartbeat ภายใน 15 นาที แบตเตอรี่ต่ำคือต่ำกว่า 20% สำนักงานเอเจนต์อยู่ที่คอนโซล แผนที่กองยานแสดงพิกัด GPS ล่าสุดต่อเครื่อง",
-    "map": "พิกัด GPS ล่าสุดต่อเครื่องจาก location_logs พินเขียวคือออนไลน์ (heartbeat ภายใน 15 นาที) พินเทาคือออฟไลน์",
-    "provisioning": "สแกน QR บนเครื่องที่รีเซ็ตโรงงานแล้ว ตั้งค่า DPC_COMPONENT_NAME, DPC_APK_URL และโฮสต์ APK เพื่อให้ checksum คำนวณจากไบต์จริง เครื่องท้องถิ่น/CI อาจใช้ fixtures/provisioning-apk-stub.bin",
-    "settings": "เผยแพร่ข้อมูลเมตา APK โดยไม่ต้องดีพลอยฮับใหม่ อุปกรณ์ดึง GET /api/version.json จาก UpdateWorker",
-    "console": "การบันทึกนโยบายอยู่ที่แดชบอร์ดกองยาน QR Zero-Touch อยู่ที่ /provisioning ตั้งค่า OPERATOR_PASSWORD ก่อนเปิดเส้นทางแอดมิน"
+    "fleet": "ออนไลน์หมายถึง heartbeat ภายใน 15 นาที แบตเตอรี่ต่ำคือต่ำกว่า 20% ใช้ค้นหาและตัวกรอง แล้วเปิดนโยบายจากปุ่มตั้งค่า",
+    "map": "พิน GPS ล่าสุดต่อเครื่อง สีเขียวคือออนไลน์ (heartbeat ภายใน 15 นาที) สีเทาคือออฟไลน์",
+    "provisioning": "สแกน QR บนเครื่องแอนดรอยด์ที่รีเซ็ตโรงงานแล้ว Checksum คำนวณจากไฟล์ APK ที่เผยแพร่ ไม่ได้พิมพ์ด้วยมือ",
+    "settings": "เผยแพร่ข้อมูลเมตา APK โดยไม่ต้องดีพลอยฮับใหม่ ลากไฟล์ APK เพื่ออ่านเวอร์ชัน เก็บในบัคเก็ต dpc-releases แล้วเปิดใช้ให้ UpdateWorker",
+    "console": "ส่งงานให้โต๊ะผู้เชี่ยวชาญ การบันทึกนโยบายและ QR Zero-Touch อยู่ที่จัดการอุปกรณ์และลงทะเบียนด่วน"
   },
   "metrics": {
-    "totalDevices": "อุปกรณ์ทั้งหมด",
+    "totalDevices": "จำนวนอุปกรณ์ทั้งหมด",
     "online": "ออนไลน์",
     "offline": "ออฟไลน์",
+    "pending": "รอดำเนินการ / ซิงก์",
+    "systemHealth": "สถานะระบบ",
+    "healthy": "ปกติ",
+    "unhealthy": "มีปัญหา",
     "healthStatus": "สถานะสุขภาพ",
     "battery": "แบตเตอรี่",
     "lowBattery": "แบตเตอรี่ต่ำ (<20%)"
@@ -74,6 +82,7 @@
     "colName": "ชื่อ",
     "colModel": "รุ่น",
     "colAndroid": "แอนดรอยด์",
+    "colAppVersion": "เวอร์ชันแอป",
     "colBattery": "แบตเตอรี่",
     "colStorage": "พื้นที่ว่าง",
     "colHeartbeat": "Heartbeat ล่าสุด",
@@ -82,13 +91,19 @@
     "emptyFilter": "ไม่พบอุปกรณ์ที่ตรงกับการค้นหานี้",
     "configure": "ตั้งค่า",
     "online": "ออนไลน์",
-    "offline": "ออฟไลน์"
+    "offline": "ออฟไลน์",
+    "syncing": "กำลังซิงก์",
+    "versionCurrent": "เป็นปัจจุบัน",
+    "versionOutdated": "มีอัปเดต",
+    "versionUnknown": "ไม่ทราบ",
+    "versionLabel": "v{code}"
   },
   "device": {
     "awaiting": "รอ HEARTBEAT",
     "name": "ชื่อ",
     "model": "รุ่น",
     "android": "แอนดรอยด์",
+    "appVersion": "เวอร์ชันแอป",
     "battery": "แบตเตอรี่",
     "storage": "พื้นที่ว่าง",
     "noHeartbeat": "ยังไม่มีแถว heartbeat สามารถบันทึกนโยบายได้ — PolicySyncWorker อาจทำงานก่อน heartbeat ครั้งแรก",
@@ -110,7 +125,8 @@
     "cancel": "ยกเลิก",
     "saving": "กำลังบันทึก…",
     "edit": "แก้ไข",
-    "add": "เพิ่ม"
+    "add": "เพิ่ม",
+    "close": "ปิด"
   },
   "policy": {
     "title": "นโยบายระยะไกล",
@@ -176,7 +192,19 @@
     "publish": "เผยแพร่เวอร์ชัน",
     "publishing": "กำลังเผยแพร่…",
     "published": "เผยแพร่แล้ว UpdateWorker จะรับในการโพลล์ครั้งถัดไป",
-    "publishFailed": "เผยแพร่เวอร์ชันไม่สำเร็จ"
+    "publishFailed": "เผยแพร่เวอร์ชันไม่สำเร็จ",
+    "uploadTitle": "อัปโหลด APK",
+    "uploadHint": "ลากไฟล์ .apk มาที่นี่ หรือคลิกเพื่อเลือก ระบบจะอ่านรหัสและชื่อเวอร์ชันจากแพ็กเกจ",
+    "uploading": "กำลังอัปโหลดและอ่าน APK…",
+    "uploaded": "อัปโหลด APK ไปที่ dpc-releases แล้ว และตั้งเป็นช่องทางที่ใช้งาน",
+    "uploadFailed": "อัปโหลด APK ไม่สำเร็จ",
+    "releasesTitle": "เวอร์ชันที่ใช้งาน",
+    "releasesEmpty": "ยังไม่มีเวอร์ชันที่เก็บไว้ อัปโหลด APK หรือเผยแพร่ด้วย URL",
+    "activate": "เปิดใช้",
+    "activated": "ตั้งเวอร์ชันนี้เป็นช่องทาง UpdateWorker ที่ใช้งานแล้ว",
+    "activeBadge": "ใช้งานอยู่",
+    "publishByUrl": "เผยแพร่ด้วย URL",
+    "publishByUrlHint": "ใช้เมื่อ APK โฮสต์ที่ URL แบบ HTTPS อยู่แล้ว"
   },
   "map": {
     "loading": "กำลังโหลดแผนที่กองยาน…",
@@ -194,6 +222,22 @@
     "historyFailed": "โหลดประวัติตำแหน่งไม่สำเร็จ",
     "historyEmpty": "ยังไม่มีเส้นทาง GPS Heartbeat ที่มีละติจูดและลองจิจูดจะแสดงเป็นเส้นทางที่นี่",
     "lastFix": "จุดล่าสุด {when}"
+  },
+  "dash": {
+    "quickActions": "ทางลัด",
+    "enroll": "สร้าง QR ลงทะเบียน",
+    "enrollHint": "รีเซ็ตโรงงานแล้วสแกนเพื่อเป็น Device Owner",
+    "inspectMap": "ดูแผนที่ติดตาม",
+    "inspectMapHint": "ดูพิน GPS ล่าสุดของทุกเครื่องที่รายงาน",
+    "publishApk": "อัปเดตเวอร์ชันแอป",
+    "publishApkHint": "เผยแพร่ข้อมูลเมตาโดยไม่ต้องดีพลอยฮับใหม่",
+    "recentActivity": "กิจกรรมล่าสุด",
+    "recentEmpty": "ยังไม่มี heartbeat อุปกรณ์จะปรากฏเมื่อเช็คอิน",
+    "activityHeartbeat": "Heartbeat"
+  },
+  "modal": {
+    "renameTitle": "เปลี่ยนชื่ออุปกรณ์",
+    "policyTitle": "ปรับนโยบาย"
   },
   "time": {
     "justNow": "เมื่อกี้",

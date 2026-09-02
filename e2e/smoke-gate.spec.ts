@@ -77,6 +77,8 @@ test.describe("Mandatory automated smoke gate", () => {
     const heartbeatBody = await heartbeat.json();
     expect(heartbeatBody.success).toBe(true);
     expect(typeof heartbeatBody.timestamp).toBe("number");
+    expect(typeof heartbeatBody.updateAvailable).toBe("boolean");
+    expect(typeof heartbeatBody.latestVersionCode).toBe("number");
 
     const fleet = await request.get("/api/admin/devices");
     expect(fleet.ok(), await fleet.text()).toBeTruthy();
@@ -113,7 +115,7 @@ test.describe("Mandatory automated smoke gate", () => {
     await expect(page.getByTestId("login-form")).toBeVisible();
     await expect(page.getByTestId("operator-password")).toBeVisible();
 
-    for (const path of ["/devices", "/map", "/provisioning"] as const) {
+    for (const path of ["/devices", "/map", "/provisioning", "/settings"] as const) {
       const probe = await request.get(path, { maxRedirects: 0 });
       const location = probe.headers()["location"] ?? "";
       const redirectedToLogin =
@@ -163,6 +165,7 @@ test.describe("Mandatory automated smoke gate", () => {
     await expect(page.getByTestId("device-table")).toBeVisible();
     await page.getByTestId("device-search").fill(DEVICE_ID);
     await expect(page.getByTestId(`device-row-${DEVICE_ID}`)).toBeVisible();
+    await expect(page.getByTestId(`device-version-${DEVICE_ID}`)).toBeVisible();
     await page.getByTestId("device-filter").selectOption("online");
     await expect(page.getByTestId(`device-row-${DEVICE_ID}`)).toBeVisible();
 

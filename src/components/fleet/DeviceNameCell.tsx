@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Modal from "@/components/ui/Modal";
 import { useTranslation } from "@/context/LanguageContext";
 
 export default function DeviceNameCell({
@@ -60,56 +61,63 @@ export default function DeviceNameCell({
     }
   }
 
-  if (editing) {
-    return (
-      <div className="name-edit" data-testid={`device-name-edit-${deviceId}`}>
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={t("device.friendlyPlaceholder")}
-          data-testid={`device-name-input-${deviceId}`}
-          disabled={saving}
-        />
-        <div className="name-edit-actions">
-          <button
-            type="button"
-            className="secondary"
-            onClick={cancel}
-            disabled={saving}
-            data-testid={`device-name-cancel-${deviceId}`}
-          >
-            {t("actions.cancel")}
-          </button>
-          <button
-            type="button"
-            className="primary"
-            onClick={() => void save()}
-            disabled={saving}
-            data-testid={`device-name-save-${deviceId}`}
-          >
-            {saving ? t("actions.saving") : t("actions.save")}
-          </button>
-        </div>
-        {error ? <p className="field-error">{error}</p> : null}
-      </div>
-    );
-  }
-
   return (
-    <div className="name-display">
-      <span data-testid={`device-name-${deviceId}`}>
-        {name && name.trim() ? name : "—"}
-      </span>
-      <button
-        type="button"
-        className="secondary name-edit-trigger"
-        onClick={openEditor}
-        data-testid={`device-name-edit-trigger-${deviceId}`}
-        aria-label={`${t("actions.rename")} ${deviceId}`}
-      >
-        {t("actions.rename")}
-      </button>
-    </div>
+    <>
+      <div className="name-display">
+        <span data-testid={`device-name-${deviceId}`}>
+          {name && name.trim() ? name : "—"}
+        </span>
+        <button
+          type="button"
+          className="secondary name-edit-trigger"
+          onClick={openEditor}
+          data-testid={`device-name-edit-trigger-${deviceId}`}
+          aria-label={`${t("actions.rename")} ${deviceId}`}
+        >
+          {t("actions.rename")}
+        </button>
+      </div>
+      {editing ? (
+        <Modal
+          title={t("modal.renameTitle")}
+          onClose={cancel}
+          testId={`device-name-edit-${deviceId}`}
+        >
+          <label className="pkg-field">
+            {t("device.name")}
+            <input
+              type="text"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={t("device.friendlyPlaceholder")}
+              data-testid={`device-name-input-${deviceId}`}
+              disabled={saving}
+              autoFocus
+            />
+          </label>
+          <div className="name-edit-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={cancel}
+              disabled={saving}
+              data-testid={`device-name-cancel-${deviceId}`}
+            >
+              {t("actions.cancel")}
+            </button>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => void save()}
+              disabled={saving}
+              data-testid={`device-name-save-${deviceId}`}
+            >
+              {saving ? t("actions.saving") : t("actions.save")}
+            </button>
+          </div>
+          {error ? <p className="field-error">{error}</p> : null}
+        </Modal>
+      ) : null}
+    </>
   );
 }
