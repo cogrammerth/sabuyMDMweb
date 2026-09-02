@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/context/LanguageContext";
+import { signOutOperator } from "@/lib/operator-session";
 
 export type OperatorNavCurrent =
   | "dashboard"
@@ -105,11 +106,7 @@ export default function OperatorNav({
   const router = useRouter();
 
   async function logout() {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } catch {
-      /* still leave the session UI */
-    }
+    await signOutOperator();
     router.replace("/login");
     router.refresh();
   }

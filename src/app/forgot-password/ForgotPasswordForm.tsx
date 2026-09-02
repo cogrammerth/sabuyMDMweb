@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "@/context/LanguageContext";
 import { authErrorKey } from "@/lib/auth-errors";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
@@ -11,19 +10,11 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function safeNextPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-}
-
-export default function LoginForm() {
+export default function ForgotPasswordForm() {
   const { t } = useTranslation();
-  const router = useRouter();
-  const search = useSearchParams();
-  const next = safeNextPath(search.get("next"));
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.FormEvent) {
@@ -39,24 +30,20 @@ export default function LoginForm() {
       setError(t("auth.invalidEmail"));
       return;
     }
-    if (!password) {
-      setError(t("auth.required"));
-      return;
-    }
 
     setBusy(true);
     try {
       const supabase = createBrowserSupabase();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: trimmedEmail,
-        password,
-      });
-      if (signInError) {
-        setError(t(authErrorKey(signInError)));
+      const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        trimmedEmail,
+        { redirectTo }
+      );
+      if (resetError) {
+        setError(t(authErrorKey(resetError)));
         return;
       }
-      router.replace(next);
-      router.refresh();
+      setSent(true);
     } catch (caught) {
       setError(t(authErrorKey(caught)));
     } finally {
@@ -64,37 +51,43 @@ export default function LoginForm() {
     }
   }
 
+  if (sent) {
+    return (
+      <div className="panel login-card" data-testid="forgot-password-sent">
+        <header className="panel-head">
+          <h2 data-i18n="auth.forgotTitle">{t("auth.forgotTitle")}</h2>
+        </header>
+        <p className="hint" data-i18n="auth.forgotSent">
+          {t("auth.forgotSent")}
+        </p>
+        <p className="auth-links">
+          <Link href="/login" data-i18n="auth.backToSignIn">
+            {t("auth.backToSignIn")}
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form
       className="panel login-card"
-      data-testid="login-form"
+      data-testid="forgot-password-form"
       onSubmit={(event) => void submit(event)}
     >
       <header className="panel-head">
-        <h2 data-i18n="login.signInTitle">{t("login.signInTitle")}</h2>
-        <span data-i18n="login.signInSubtitle">{t("login.signInSubtitle")}</span>
+        <h2 data-i18n="auth.forgotTitle">{t("auth.forgotTitle")}</h2>
+        <span data-i18n="auth.forgotSubtitle">{t("auth.forgotSubtitle")}</span>
       </header>
       <label className="pkg-field">
         <span data-i18n="auth.email">{t("auth.email")}</span>
         <input
-          data-testid="operator-email"
+          data-testid="forgot-email"
           type="email"
           name="email"
-          autoComplete="username"
+          autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-      </label>
-      <label className="pkg-field">
-        <span data-i18n="login.password">{t("login.password")}</span>
-        <input
-          data-testid="operator-password"
-          type="password"
-          name="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
           required
         />
       </label>
@@ -103,12 +96,17 @@ export default function LoginForm() {
           {error}
         </p>
       ) : null}
-      <button className="primary" type="submit" disabled={busy} data-testid="operator-login" data-i18n="login.submit">
-        {busy ? t("login.submitting") : t("login.submit")}
+      <button
+        className="primary"
+        type="submit"
+        disabled={busy}
+        data-testid="forgot-submit"
+      >
+        {busy ? t("auth.forgotSubmitting") : t("auth.forgotSubmit")}
       </button>
       <p className="auth-links">
-        <Link href="/forgot-password" data-testid="forgot-password-link" data-i18n="auth.forgotPassword">
-          {t("auth.forgotPassword")}
+        <Link href="/login" data-i18n="auth.backToSignIn">
+          {t("auth.backToSignIn")}
         </Link>
       </p>
     </form>

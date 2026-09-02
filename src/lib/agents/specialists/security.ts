@@ -99,8 +99,9 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
       "service-role-not-public-prefixed",
       !supabase.includes("NEXT_PUBLIC_SUPABASE_SERVICE") &&
         envExample.includes("SUPABASE_SERVICE_ROLE_KEY") &&
+        envExample.includes("NEXT_PUBLIC_SUPABASE_ANON_KEY") &&
         !envExample.includes("NEXT_PUBLIC_SUPABASE_SERVICE"),
-      "Service role key is not a NEXT_PUBLIC_ binding"
+      "Service role key is not a NEXT_PUBLIC_ binding; anon key is public"
     )
   );
   checks.push(
@@ -125,9 +126,10 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
   checks.push(
     check(
       "operator-gate",
-      operatorAuth.includes("OPERATOR_PASSWORD") &&
-        operatorAuth.includes("requireOperatorJson"),
-      "Admin writes go through the operator gate"
+      operatorAuth.includes("getUser") &&
+        operatorAuth.includes("requireOperatorJson") &&
+        !operatorAuth.includes("OPERATOR_PASSWORD"),
+      "Admin writes require a Supabase Auth session (getUser)"
     )
   );
 
@@ -148,10 +150,11 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
   checks.push(
     check(
       "map-page-middleware",
-      middleware.includes('"/map"') &&
-        middleware.includes('"/settings"') &&
-        middleware.includes("/api/admin/:path*"),
-      "Middleware matcher covers /map, /settings, and all /api/admin routes"
+      middleware.includes("/api/admin") &&
+        middleware.includes("/login") &&
+        middleware.includes("/api/heartbeat") &&
+        middleware.includes("getUser"),
+      "Middleware refreshes Supabase sessions and keeps device APIs public"
     )
   );
   checks.push(
@@ -312,10 +315,18 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
     const rejectBody = (await reject.json()) as { error?: string };
     checks.push(
       check(
+        "kiosk-put-unauth",
+        reject.status === 401,
+        `Unauthenticated kiosk PUT → ${reject.status}`
+      )
+    );
+    checks.push(
+      check(
         "kiosk-put-rejected",
-        reject.status === 400 &&
-          typeof rejectBody.error === "string" &&
-          /kioskPackage/i.test(rejectBody.error),
+        reject.status === 401 ||
+          (reject.status === 400 &&
+            typeof rejectBody.error === "string" &&
+            /kioskPackage/i.test(rejectBody.error)),
         `PUT kiosk without package → ${reject.status}`
       )
     );
@@ -375,28 +386,11 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deviceId: "qa-zt-probe" }),
     });
-    const body = (await qr.json()) as {
-      success?: boolean;
-      extras?: Record<string, unknown>;
-      checksum?: string;
-      qrDataUrl?: string;
-    };
-    const extras = body.extras ?? {};
-    const checksum = String(
-      extras["android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"] ??
-        body.checksum ??
-        ""
-    );
     checks.push(
       check(
-        "zt-qr-live",
-        qr.ok &&
-          body.success === true &&
-          typeof body.qrDataUrl === "string" &&
-          body.qrDataUrl.startsWith("data:image/") &&
-          checksum.length > 8 &&
-          checksum !== "<sha256-of-apk>",
-        `POST /api/admin/provisioning/qr → ${qr.status}`
+        "zt-qr-unauth",
+        qr.status === 401,
+        `Unauthenticated POST /api/admin/provisioning/qr → ${qr.status}`
       )
     );
   } catch (error) {
@@ -444,12 +438,11 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
     const latest = await fetch(`${origin()}/api/admin/locations/latest`, {
       cache: "no-store",
     });
-    const latestBody = (await latest.json()) as { success?: boolean };
     checks.push(
       check(
-        "locations-latest-live",
-        latest.ok && latestBody.success === true,
-        `GET /api/admin/locations/latest → ${latest.status}`
+        "locations-latest-unauth",
+        latest.status === 401,
+        `Unauthenticated GET /api/admin/locations/latest → ${latest.status}`
       )
     );
   } catch (error) {

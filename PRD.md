@@ -5,7 +5,7 @@
 | Field | Value |
 | --- | --- |
 | Product | Sabuy MDM Web Hub |
-| Version | 0.8.0 (in-hub APK releases + version compare) |
+| Version | 0.9.0 (Supabase Auth for operators) |
 | Last updated | 2026-09-02 |
 | Primary domain | `https://mdmweb.sabuycall.net` |
 | Repo package | `sabuycall-mdm-web` |
@@ -137,7 +137,13 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `src/lib/devices.ts` | Fleet list/get; `isOnline` from `last_heartbeat` |
 | `src/lib/policies.ts` | Policy map, kiosk validation, upsert |
 | `src/lib/online.ts` | 15-minute online window |
-| `src/lib/operator-auth.ts` | Shared `OPERATOR_PASSWORD` cookie/bearer gate |
+| `src/app/login` | Operator email/password sign-in |
+| `src/app/forgot-password` | Password reset request |
+| `src/app/reset-password` | Set new password from the email link |
+| `src/app/auth/callback/route.ts` | PKCE code exchange for recovery / auth links |
+| `src/lib/operator-auth.ts` | Supabase Auth session gate (`getUser` via `@supabase/ssr`) |
+| `src/lib/supabase-env.ts` | Public URL + anon key helper |
+| `src/middleware.ts` | Session refresh + operator route protection |
 | `src/lib/supabase.ts` | Server-only admin client singleton |
 | `src/types/mdm.ts` | Shared types + `Database` schema |
 | `supabase/migrations/001_mdm_phase1.sql` | Canonical schema |
@@ -171,7 +177,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 - `version.json` is likewise a flat object.
 - Heartbeat success: `{ "success": true, "timestamp": <epoch_ms>, "updateAvailable": <bool>, "latestVersionCode": <number> }`.
 - **Phase 1 APIs are unauthenticated.** Treat the public URL as a trusted fleet channel until a later revision adds a device token / HMAC.
-- **Admin APIs require the operator gate.** `OPERATOR_PASSWORD` issues an httpOnly session cookie (or `Authorization: Bearer`). In local development, if the password is unset the gate stays open so Playwright can run. Production refuses admin routes until the password is set.
+- **Admin APIs require a Supabase Auth session.** Middleware and `requireOperatorJson` call `supabase.auth.getUser()`. Unauthenticated UI visits redirect to `/login`. Device-facing routes stay public.
 
 ---
 
@@ -333,7 +339,7 @@ GET /api/version.json?currentAppVersionCode=12
 
 ### 3.4 Admin fleet APIs (Phase 2)
 
-All `/api/admin/*` routes require the operator gate (`OPERATOR_PASSWORD` session cookie or Bearer token). Device-facing routes stay on `/api/heartbeat`, `/api/policy`, `/api/version.json`.
+All `/api/admin/*` routes require a signed-in Supabase Auth operator. Device-facing routes stay on `/api/heartbeat`, `/api/policy`, `/api/version.json`.
 
 JSON at the HTTP boundary is **camelCase**. `isOnline` is **computed** from `last_heartbeat` (within 15 minutes) and is not read from the `is_online` column.
 
@@ -398,8 +404,8 @@ Operator policy save. Upserts `policies` and bumps `updated_at`. **No FK to devi
 | --- | --- | --- |
 | 200 | `{ "success": true, "policy": { …PolicyResponse } }` | Upsert OK |
 | 400 | `{ "success": false, "error": "kioskPackage is required when kioskMode is true" }` | Locktask on with empty package |
-| 401 | `{ "success": false, "error": "Operator authentication required" }` | Gate configured and no session |
-| 503 | `{ "success": false, "error": "Operator gate is not configured …" }` | Production without `OPERATOR_PASSWORD` |
+| 401 | `{ "success": false, "error": "Operator authentication required" }` | No valid Supabase Auth session |
+| 503 | `{ "success": false, "error": "Supabase Auth is not configured …" }` | Missing `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
 
 ### 3.5 Zero-Touch provisioning APIs (Phase 3)
 
@@ -676,7 +682,7 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 **Shipped**
 
-- [x] Shared operator gate (`OPERATOR_PASSWORD` cookie / Bearer). Production 503 if unset; local gate open when unset.
+- [x] Supabase Auth (email + password) for operators via `@supabase/ssr`. Production 503 if the anon key is unset.
 - [x] Fleet dashboard `/devices`: summary cards, search/filter, battery bar, relative heartbeat, Configure.
 - [x] Device policy editor `/devices/[deviceId]`: camera / factory reset / safe boot / USB debugging / kiosk + package, hidden/suspended app lists, toast on save.
 - [x] `PUT /api/admin/devices/:deviceId/policy` upserts `policies` and bumps `updated_at`.
@@ -685,12 +691,12 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 **Deferred**
 
-- Supabase Auth (email) — the shared password gate is the Phase 2 decision.
+- Device token / HMAC on heartbeat + policy.
 
 **Acceptance (met)**
 
 - Changing policy in UI is visible on the next `PolicySyncWorker` poll.
-- Unauthenticated users cannot read or write `/api/admin/*` or `/devices` when `OPERATOR_PASSWORD` is set (production always requires it).
+- Unauthenticated users cannot read or write `/api/admin/*` or operator pages (`/`, `/devices`, `/map`, `/provisioning`, `/settings`).
 - `SUPABASE_SERVICE_ROLE_KEY` never appears in client bundles.
 
 ---
@@ -798,9 +804,11 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 
 | Variable | Where | Public? |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` / Railway | Yes (URL only) |
-| `SUPABASE_SERVICE_ROLE_KEY` | `.env.local` / Railway | **No — server only** |
-| `OPERATOR_PASSWORD` | `.env.local` / Railway | **No — operator gate** |
+| `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` / host | Yes (URL only) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` / host | Yes (anon JWT; required for Auth) |
+| `SUPABASE_SERVICE_ROLE_KEY` | `.env.local` / host | **No — server only** |
+| `E2E_OPERATOR_EMAIL` | `.env.local` / CI | No — Playwright operator user |
+| `E2E_OPERATOR_PASSWORD` | `.env.local` / CI | **No — Playwright operator password** |
 | `DPC_COMPONENT_NAME` | `.env.local` / Railway | No (server config) |
 | `DPC_APK_URL` | `.env.local` / Railway | No (server config) |
 | `MDM_SERVER_URL` | `.env.local` / Railway | No (server config) |
@@ -826,7 +834,7 @@ Apply `supabase/migrations/001_mdm_phase1.sql`, `002_app_versions.sql`, and `003
 | Topic | Current (Phase 2) | Target |
 | --- | --- | --- |
 | Device APIs | Open to anyone who knows the URL | Device token / HMAC on heartbeat + policy |
-| Admin UI | Shared `OPERATOR_PASSWORD` gate on `/devices` and `/api/admin/*` | Optional upgrade to Supabase Auth / Cloudflare Access |
+| Admin UI | Supabase Auth email/password on operator pages and `/api/admin/*` | Optional allow-list / SSO later |
 | Database | RLS on, no public policies; service role from API | Keep; never use service role in the browser |
 | Location | Stored as lat/lng per heartbeat; operator-gated map APIs | Retention job still optional |
 | PII | `device_id` + GPS | Treat as operational PII; no analytics dump to third parties |
@@ -853,7 +861,7 @@ If `kioskMode` is true, `kioskPackage` must be a launchable package already inst
 
 Resolve before or during Phase 2:
 
-1. **Operator auth:** **Decided — shared `OPERATOR_PASSWORD` gate** (cookie + Bearer). Supabase Auth / Cloudflare Access can replace it later.
+1. **Operator auth:** **Decided — Supabase Auth** (email + password, `@supabase/ssr` cookies). Create operator users in the Supabase Auth dashboard (or via Playwright `E2E_OPERATOR_*`).
 2. **Online window:** **15 minutes**, computed from `last_heartbeat`.
 3. **DPC identity:** default `net.sabuycall.mdm/.DeviceAdminReceiver` — freeze in Android repo and override `DPC_COMPONENT_NAME` when final.
 4. **Heartbeat auth:** when to require a provisioning-time token?
@@ -908,7 +916,7 @@ Live Chromium (`scripts/browser-loop.mjs`) runs only when `ALLOW_AGENT_BROWSER=1
 1. `GET /api/health` → 200, `healthy`, DB `connected`
 2. `GET /api/version.json` and `GET /api/policy?deviceId=test-device-01` return valid payloads
 3. `POST /api/heartbeat` with mock GPS/battery (and optional `currentAppVersionCode`) → 200, upserts fleet + location, returns `updateAvailable`
-4. `/login`, `/devices`, `/map`, `/provisioning`, `/settings` load without uncaught console errors or 500s; unauthenticated UI redirects to `/login` when the operator gate is required
+4. `/login`, `/forgot-password`, `/reset-password` load; unauthenticated UI redirects to `/login`; Playwright logs in with `E2E_OPERATOR_EMAIL` / `E2E_OPERATOR_PASSWORD`
 5. Fleet table search/filter responds; Zero-Touch QR renders without runtime exceptions
 
 Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks, typing vs idle, paper-packet handoff, speech bubble).
@@ -919,6 +927,7 @@ Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks,
 
 | Date | Change |
 | --- | --- |
+| 2026-09-02 | Replace operator shared-password gate with Supabase Auth (login / forgot / reset, session middleware) |
 | 2026-09-02 | In-hub APK releases: Storage `dpc-releases`, upload parser, heartbeat/version compare, fleet version badges |
 | 2026-09-02 | Operator console UX: executive dashboard on `/`, sidebar app shell, status badges, rename modal; Thai default locale |
 | 2026-08-30 | Bilingual i18n (Thai / English): `LanguageProvider`, locale dictionaries, header language dropdown, Playwright i18n smoke |

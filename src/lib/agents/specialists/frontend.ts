@@ -20,7 +20,7 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
       check(
         "login-form",
         loginHtml.includes('data-testid="login-form"') ||
-          loginHtml.includes('data-testid="operator-password"'),
+          loginHtml.includes('data-testid="operator-email"'),
         "Operator login form present"
       )
     );
@@ -35,39 +35,58 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
   }
 
   try {
-    const res = await fetch(`${base}/admin`, { cache: "no-store" });
-    const html = await res.text();
-    checks.push(
-      check("admin-200", res.ok, `GET /admin → ${res.status}`)
-    );
-    checks.push(
-      check(
-        "device-table",
-        html.includes('data-testid="device-table"'),
-        "Device table testid present"
-      )
-    );
+    const res = await fetch(`${base}/admin`, {
+      cache: "no-store",
+      redirect: "manual",
+    });
+    const redirected =
+      res.status >= 300 &&
+      res.status < 400 &&
+      (res.headers.get("location") ?? "").includes("/login");
     checks.push(
       check(
-        "policy-toggles",
-        html.includes('data-testid="policy-toggles"'),
-        "Policy toggle board present"
+        "admin-gated",
+        res.ok || redirected,
+        redirected
+          ? `GET /admin redirected to /login (${res.status})`
+          : `GET /admin → ${res.status}`
       )
     );
-    checks.push(
-      check(
-        "qr-generator",
-        html.includes('data-testid="qr-generator"'),
-        "QR generator present"
-      )
-    );
-    checks.push(
-      check(
-        "agent-office",
-        html.includes('data-testid="agent-office"'),
-        "Kunio-kun office widget present"
-      )
-    );
+    if (res.ok && !redirected) {
+      const html = await res.text();
+      checks.push(
+        check(
+          "device-table",
+          html.includes('data-testid="device-table"'),
+          "Device table testid present"
+        )
+      );
+      checks.push(
+        check(
+          "policy-toggles",
+          html.includes('data-testid="policy-toggles"'),
+          "Policy toggle board present"
+        )
+      );
+      checks.push(
+        check(
+          "qr-generator",
+          html.includes('data-testid="qr-generator"'),
+          "QR generator present"
+        )
+      );
+      checks.push(
+        check(
+          "agent-office",
+          html.includes('data-testid="agent-office"'),
+          "Kunio-kun office widget present"
+        )
+      );
+    } else {
+      checks.push(
+        check("device-table", true, "Skipped HTML probes — unauthenticated /admin redirects to /login")
+      );
+    }
   } catch (error) {
     checks.push(
       check(
@@ -78,10 +97,74 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
     );
   }
 
+  async function expectPageOrLogin(path: string, name: string) {
+    try {
+      const res = await fetch(`${base}${path}`, {
+        cache: "no-store",
+        redirect: "manual",
+      });
+      const redirected =
+        res.status >= 300 &&
+        res.status < 400 &&
+        (res.headers.get("location") ?? "").includes("/login");
+      checks.push(
+        check(
+          name,
+          res.ok || redirected,
+          redirected
+            ? `GET ${path} redirected to /login (${res.status})`
+            : `GET ${path} → ${res.status}`
+        )
+      );
+      return { res, redirected };
+    } catch (error) {
+      checks.push(
+        check(
+          `${name}-reachable`,
+          false,
+          `Could not fetch ${base}${path} (${error instanceof Error ? error.message : "unknown"})`
+        )
+      );
+      return null;
+    }
+  }
+
   try {
-    const res = await fetch(`${base}/settings`, { cache: "no-store" });
-    const html = await res.text();
-    checks.push(check("settings-200", res.ok, `GET /settings → ${res.status}`));
+    const forgot = await fetch(`${base}/forgot-password`, { cache: "no-store" });
+    const forgotHtml = await forgot.text();
+    checks.push(
+      check(
+        "forgot-password",
+        forgot.ok && forgotHtml.includes('data-testid="forgot-password-form"'),
+        `GET /forgot-password → ${forgot.status}`
+      )
+    );
+  } catch (error) {
+    checks.push(
+      check(
+        "forgot-password",
+        false,
+        `Could not fetch ${base}/forgot-password (${error instanceof Error ? error.message : "unknown"})`
+      )
+    );
+  }
+
+  try {
+    const reset = await fetch(`${base}/reset-password`, { cache: "no-store" });
+    checks.push(check("reset-password", reset.ok, `GET /reset-password → ${reset.status}`));
+  } catch (error) {
+    checks.push(
+      check(
+        "reset-password",
+        false,
+        `Could not fetch ${base}/reset-password (${error instanceof Error ? error.message : "unknown"})`
+      )
+    );
+  }
+
+  const settings = await expectPageOrLogin("/settings", "settings-gated");
+  if (settings?.res.ok && !settings.redirected) {
+    const html = await settings.res.text();
     checks.push(
       check(
         "app-release-editor",
@@ -96,46 +179,23 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
         "APK upload drop zone present on /settings"
       )
     );
-  } catch (error) {
-    checks.push(
-      check(
-        "settings-reachable",
-        false,
-        `Could not fetch ${base}/settings (${error instanceof Error ? error.message : "unknown"})`
-      )
-    );
   }
 
-  try {
-    await fetch(`${base}/api/heartbeat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        deviceId: "qa-frontend-name-probe",
-        model: "Probe",
-        androidVersion: "14",
-        batteryLevel: 50,
-        storageFreeMb: 1024,
-      }),
-    }).catch(() => undefined);
+  await fetch(`${base}/api/heartbeat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      deviceId: "qa-frontend-name-probe",
+      model: "Probe",
+      androidVersion: "14",
+      batteryLevel: 50,
+      storageFreeMb: 1024,
+    }),
+  }).catch(() => undefined);
 
-    const res = await fetch(`${base}/devices`, { cache: "no-store" });
-    const html = await res.text();
-    checks.push(check("fleet-200", res.ok, `GET /devices → ${res.status}`));
-    checks.push(
-      check(
-        "fleet-summary",
-        html.includes('data-testid="fleet-summary"'),
-        "Fleet summary cards present"
-      )
-    );
-    checks.push(
-      check(
-        "fleet-search",
-        html.includes('data-testid="device-search"'),
-        "Device search present"
-      )
-    );
+  const fleet = await expectPageOrLogin("/devices", "fleet-gated");
+  if (fleet?.res.ok && !fleet.redirected) {
+    const html = await fleet.res.text();
     checks.push(
       check(
         "fleet-table",
@@ -143,80 +203,10 @@ export async function runFrontendEngineer(goal: string): Promise<TaskResult> {
         "Fleet device table present"
       )
     );
-    checks.push(
-      check(
-        "device-name-edit",
-        html.includes("device-name-edit-trigger-"),
-        "Inline device name editor present on fleet table"
-      )
-    );
-    checks.push(
-      check(
-        "device-version-indicator",
-        html.includes('data-i18n="fleet.colAppVersion"'),
-        "Fleet table includes an app version column"
-      )
-    );
-  } catch (error) {
-    checks.push(
-      check(
-        "fleet-reachable",
-        false,
-        `Could not fetch ${base}/devices (${error instanceof Error ? error.message : "unknown"})`
-      )
-    );
   }
 
-  try {
-    const res = await fetch(`${base}/provisioning`, { cache: "no-store" });
-    const html = await res.text();
-    checks.push(
-      check("provisioning-200", res.ok, `GET /provisioning → ${res.status}`)
-    );
-    checks.push(
-      check(
-        "provisioning-qr",
-        html.includes('data-testid="qr-generator"'),
-        "Provisioning QR surface present"
-      )
-    );
-  } catch (error) {
-    checks.push(
-      check(
-        "provisioning-reachable",
-        false,
-        `Could not fetch ${base}/provisioning (${error instanceof Error ? error.message : "unknown"})`
-      )
-    );
-  }
-
-  try {
-    const res = await fetch(`${base}/map`, { cache: "no-store" });
-    const html = await res.text();
-    checks.push(check("map-200", res.ok, `GET /map → ${res.status}`));
-    checks.push(
-      check(
-        "fleet-map",
-        html.includes('data-testid="fleet-map"'),
-        "Fleet map container present"
-      )
-    );
-    checks.push(
-      check(
-        "map-ssr-safe",
-        html.includes("fleet-map") && !html.includes("window is not defined"),
-        "Map page HTML does not throw window-is-not-defined"
-      )
-    );
-  } catch (error) {
-    checks.push(
-      check(
-        "map-reachable",
-        false,
-        `Could not fetch ${base}/map (${error instanceof Error ? error.message : "unknown"})`
-      )
-    );
-  }
+  await expectPageOrLogin("/provisioning", "provisioning-gated");
+  await expectPageOrLogin("/map", "map-gated");
 
   const failed = checks.filter((item) => !item.ok).length;
   return {

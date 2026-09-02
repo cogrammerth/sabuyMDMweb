@@ -1150,8 +1150,73 @@ textarea {
   color: #ffb4a8;
 }
 
+.auth-shell {
+  min-height: 100vh;
+}
+
+.auth-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
 .login-card {
-  max-width: 28rem;
+  width: 100%;
+  max-width: 26rem;
+  padding: 1.25rem 1.3rem 1.4rem;
+}
+
+.auth-links {
+  margin: 0.95rem 0 0;
+  font-size: 0.85rem;
+}
+
+.auth-links a {
+  color: #9ec4ff;
+  text-underline-offset: 0.15em;
+}
+
+.session-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.session-email {
+  font-size: 0.8rem;
+  color: var(--muted);
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-signout {
+  border: 1px solid var(--line);
+  background: #1b2430;
+  color: var(--foreground);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.session-signout:hover,
+.session-signout:focus-visible {
+  border-color: #5a4a20;
+  background: #2a2418;
+  color: #ffd36a;
+  outline: none;
+}
+
+.session-signout:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .map-shell {
@@ -1312,6 +1377,10 @@ textarea {
   .admin-top-tools {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .session-email {
+    max-width: 10rem;
   }
 
   .app-frame {

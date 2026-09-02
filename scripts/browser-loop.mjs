@@ -121,12 +121,16 @@ async function fetchFallback() {
   }
 
   try {
-    const html = await (await fetch(`${BASE}/admin`)).text();
-    for (const id of ["device-table", "policy-toggles", "qr-generator", "agent-office"]) {
-      checks.push(
-        check(`testid:${id}`, html.includes(`data-testid="${id}"`), `looking for ${id}`)
-      );
-    }
+    const htmlRes = await fetch(`${BASE}/login`);
+    const html = await htmlRes.text();
+    checks.push(
+      check(
+        "testid:login-form",
+        html.includes('data-testid="login-form"') &&
+          html.includes('data-testid="operator-email"'),
+        "login form"
+      )
+    );
   } catch (error) {
     checks.push(
       check("admin-html", false, error instanceof Error ? error.message : "fail")

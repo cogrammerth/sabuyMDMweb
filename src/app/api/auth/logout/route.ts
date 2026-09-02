@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
-import { OPERATOR_COOKIE } from "@/lib/operator-auth";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { getSupabasePublicEnv } from "@/lib/supabase-env";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  const response = NextResponse.json({ success: true });
-  response.cookies.set(OPERATOR_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
-  return response;
+  if (!getSupabasePublicEnv()) {
+    return NextResponse.json({ success: true });
+  }
+
+  try {
+    const supabase = await createServerSupabaseClient();
+    await supabase.auth.signOut();
+  } catch {
+    /* still report success so the client can leave the session UI */
+  }
+
+  return NextResponse.json({ success: true });
 }

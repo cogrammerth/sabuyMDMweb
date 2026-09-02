@@ -93,23 +93,21 @@ test.describe("Production readiness — fleet control", () => {
     await expect(page.getByTestId("app-release-current")).toContainText(RELEASE_NAME);
   });
 
-  test("admin write endpoints reject unauthenticated callers when gate is required", async ({
-    request,
-  }) => {
-    test.skip(
-      process.env.OPERATOR_PASSWORD === undefined ||
-        process.env.OPERATOR_PASSWORD === "",
-      "Gate is open in local dev when OPERATOR_PASSWORD is unset"
-    );
+  test.describe("unauthenticated admin writes", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-    const res = await request.put("/api/admin/app-version", {
-      headers: { Authorization: "Bearer wrong-token" },
-      data: {
-        versionCode: 1,
-        versionName: "1.0.0",
-        apkUrl: "https://mdmweb.sabuycall.net/apk/sabuy-mdm.apk",
-      },
+    test("admin write endpoints reject unauthenticated callers", async ({
+      request,
+    }) => {
+      const res = await request.put("/api/admin/app-version", {
+        headers: { Authorization: "Bearer wrong-token" },
+        data: {
+          versionCode: 1,
+          versionName: "1.0.0",
+          apkUrl: "https://mdmweb.sabuycall.net/apk/sabuy-mdm.apk",
+        },
+      });
+      expect(res.status()).toBe(401);
     });
-    expect(res.status()).toBe(401);
   });
 });

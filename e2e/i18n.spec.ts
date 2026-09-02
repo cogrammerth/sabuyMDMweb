@@ -2,7 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import en from "../src/locales/en.json";
 import th from "../src/locales/th.json";
 
-const ROUTES = ["/", "/login", "/devices", "/map", "/provisioning", "/settings"] as const;
+const CONSOLE_ROUTES = ["/", "/devices", "/map", "/provisioning", "/settings"] as const;
+const AUTH_ROUTES = ["/login", "/forgot-password"] as const;
 
 function flattenKeys(obj: unknown, prefix = ""): string[] {
   if (typeof obj === "string") return prefix ? [prefix] : [];
@@ -64,6 +65,9 @@ test.describe("Bilingual i18n engine", () => {
         "nav.appReleases",
         "nav.office",
         "nav.logout",
+        "auth.email",
+        "auth.forgotPassword",
+        "auth.signOut",
         "metrics.totalDevices",
         "metrics.online",
         "metrics.offline",
@@ -95,10 +99,10 @@ test.describe("Bilingual i18n engine", () => {
       window.localStorage.setItem("sabuy-mdm-locale", "en");
     });
 
-    for (const route of ROUTES) {
+    for (const route of CONSOLE_ROUTES) {
       await page.goto(route);
-      if (page.url().includes("/login") && route !== "/login") {
-        test.skip(true, "Operator gate required — i18n UI is behind /login");
+      if (page.url().includes("/login")) {
+        throw new Error(`Expected authenticated session for ${route}, landed on ${page.url()}`);
       }
 
       await expect(page.getByTestId("language-selector")).toBeVisible();
@@ -126,9 +130,6 @@ test.describe("Bilingual i18n engine", () => {
         await expect(page.getByTestId("exec-dashboard")).toBeVisible();
         await expect(page.getByTestId("quick-actions")).toBeVisible();
         await expect(page.locator("body")).not.toContainText("POST /api/heartbeat");
-      }
-      if (route === "/login") {
-        await expect(page.getByTestId("page-title")).toHaveText("ประตูผู้ปฏิบัติงาน");
       }
       if (route === "/devices") {
         await expect(page.getByTestId("page-title")).toHaveText("จัดการอุปกรณ์");
@@ -166,9 +167,6 @@ test.describe("Bilingual i18n engine", () => {
         await expect(page.getByTestId("page-title")).toHaveText("Dashboard");
         await expect(page.getByTestId("exec-dashboard")).toBeVisible();
       }
-      if (route === "/login") {
-        await expect(page.getByTestId("page-title")).toHaveText("Operator gate");
-      }
       if (route === "/devices") {
         await expect(page.getByTestId("page-title")).toHaveText("Fleet Management");
         await expect(page.getByTestId("summary-total")).toContainText(
@@ -188,6 +186,42 @@ test.describe("Bilingual i18n engine", () => {
     expect(unexpected, unexpected.join("\n")).toEqual([]);
   });
 
+  test.describe("auth pages", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test("language switcher works on login and forgot-password", async ({ page }) => {
+      await page.addInitScript(() => {
+        window.localStorage.setItem("sabuy-mdm-locale", "en");
+      });
+
+      for (const route of AUTH_ROUTES) {
+        await page.goto(route);
+        await expect(page.getByTestId("language-selector")).toBeVisible();
+        await expect(page.getByTestId("language-selector-button")).toContainText(
+          "English"
+        );
+        await chooseLocale(page, "th");
+        await expect(page.getByTestId("language-selector-button")).toContainText(
+          "ภาษาไทย"
+        );
+        if (route === "/login") {
+          await expect(page.getByTestId("page-title")).toHaveText("เข้าสู่ระบบ");
+        }
+        if (route === "/forgot-password") {
+          await expect(page.getByTestId("page-title")).toHaveText("รีเซ็ตรหัสผ่าน");
+        }
+        await assertNoMissingKeys(page);
+        await chooseLocale(page, "en");
+        if (route === "/login") {
+          await expect(page.getByTestId("page-title")).toHaveText("Sign in");
+        }
+        if (route === "/forgot-password") {
+          await expect(page.getByTestId("page-title")).toHaveText("Reset password");
+        }
+      }
+    });
+  });
+
   test("Thai copy does not overflow the header at mobile width", async ({
     page,
   }) => {
@@ -196,9 +230,6 @@ test.describe("Bilingual i18n engine", () => {
       window.localStorage.setItem("sabuy-mdm-locale", "th");
     });
     await page.goto("/devices");
-    if (page.url().includes("/login")) {
-      test.skip(true, "Operator gate required — i18n UI is behind /login");
-    }
     await expect(page.getByTestId("language-selector")).toBeVisible();
     await expect(page.getByTestId("operator-nav")).toBeVisible();
     await assertNoHorizontalOverflow(page);

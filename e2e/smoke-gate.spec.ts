@@ -104,34 +104,32 @@ test.describe("Mandatory automated smoke gate", () => {
     });
   });
 
-  test("4. UI pages load without 500s or uncaught console errors; auth gate targets /login", async ({
+  test.describe("unauthenticated UI gate", () => {
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test("4a. login page renders email/password with language switcher", async ({ page }) => {
+      const consoleErrors = collectPageErrors(page);
+      await page.goto("/login");
+      await expect(page.getByTestId("login-page")).toBeVisible();
+      await expect(page.getByTestId("login-form")).toBeVisible();
+      await expect(page.getByTestId("operator-email")).toBeVisible();
+      await expect(page.getByTestId("operator-password")).toBeVisible();
+      await expect(page.getByTestId("forgot-password-link")).toBeVisible();
+      await expect(page.getByTestId("language-selector")).toBeVisible();
+      const unexpected = consoleErrors.filter((text) => !isBenignConsole(text));
+      expect(unexpected, unexpected.join("\n")).toEqual([]);
+    });
+  });
+
+  test("4b. authenticated operator pages load without 500s or uncaught console errors", async ({
     page,
-    request,
   }) => {
     const consoleErrors = collectPageErrors(page);
 
-    await page.goto("/login");
-    await expect(page.getByTestId("login-page")).toBeVisible();
-    await expect(page.getByTestId("login-form")).toBeVisible();
-    await expect(page.getByTestId("operator-password")).toBeVisible();
-
     for (const path of ["/devices", "/map", "/provisioning", "/settings"] as const) {
-      const probe = await request.get(path, { maxRedirects: 0 });
-      const location = probe.headers()["location"] ?? "";
-      const redirectedToLogin =
-        probe.status() >= 300 &&
-        probe.status() < 400 &&
-        location.includes("/login");
-      expect(
-        probe.ok() || redirectedToLogin,
-        `${path} → ${probe.status()} ${location}`
-      ).toBeTruthy();
-
       await page.goto(path);
-      expect(page.url()).toMatch(new RegExp(`(${path}|/login)`));
-      if (page.url().includes("/login")) {
-        await expect(page.getByTestId("login-form")).toBeVisible();
-      }
+      await expect(page.getByTestId("page-title")).toBeVisible();
+      expect(page.url()).toMatch(new RegExp(`${path.replace("/", "\\/")}`));
     }
 
     const unexpected = consoleErrors.filter((text) => !isBenignConsole(text));
@@ -158,10 +156,6 @@ test.describe("Mandatory automated smoke gate", () => {
     expect(heartbeat.ok(), await heartbeat.text()).toBeTruthy();
 
     await page.goto("/devices");
-    if (page.url().includes("/login")) {
-      test.skip(true, "Operator gate required — fleet UI is behind /login");
-    }
-
     await expect(page.getByTestId("device-table")).toBeVisible();
     await page.getByTestId("device-search").fill(DEVICE_ID);
     await expect(page.getByTestId(`device-row-${DEVICE_ID}`)).toBeVisible();

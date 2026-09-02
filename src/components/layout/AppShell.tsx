@@ -5,6 +5,7 @@ import LanguageSelector from "@/components/i18n/LanguageSelector";
 import OperatorNav, {
   type OperatorNavCurrent,
 } from "@/components/fleet/OperatorNav";
+import OperatorSessionMenu from "@/components/auth/OperatorSessionMenu";
 import { useTranslation } from "@/context/LanguageContext";
 import type { MessageKey } from "@/lib/i18n";
 
@@ -43,7 +44,10 @@ export default function AppShell({
               {t(titleKey)}
             </h1>
           </div>
-          <LanguageSelector />
+          <div className="admin-top-tools">
+            <OperatorSessionMenu />
+            <LanguageSelector />
+          </div>
         </header>
         <div className={contentClassName ? `app-content ${contentClassName}` : "app-content"}>
           {children}

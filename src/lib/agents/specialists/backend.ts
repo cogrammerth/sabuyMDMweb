@@ -47,6 +47,8 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
   const deviceLocations = readRepo(
     "src/app/api/admin/devices/[deviceId]/locations/route.ts"
   );
+  const operatorAuth = readRepo("src/lib/operator-auth.ts");
+  const middleware = readRepo("src/middleware.ts");
   const health = readRepo("src/app/api/health/route.ts");
   const locationsHelper = readRepo("src/lib/locations.ts");
 
@@ -253,12 +255,15 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
       "Location helpers map snake_case rows to camelCase HTTP"
     ),
     check(
-      "locations-history-asc",
+      "supabase-auth-session",
       Boolean(
-        locationsHelper?.includes("reverse()") &&
-          locationsHelper.includes("recorded_at")
+        operatorAuth?.includes("getUser") &&
+          operatorAuth.includes("requireOperatorJson") &&
+          !operatorAuth.includes("OPERATOR_PASSWORD") &&
+          middleware?.includes("updateSession") &&
+          middleware.includes("/api/heartbeat")
       ),
-      "Device history is returned oldest-first for polyline drawing"
+      "Operator APIs use Supabase Auth sessions; device endpoints stay public"
     ),
   ];
 

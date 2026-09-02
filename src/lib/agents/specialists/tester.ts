@@ -63,19 +63,6 @@ function runNodeScript(
 
 const SMOKE_DEVICE_ID = "test-device-01";
 
-type FleetRow = {
-  deviceId?: string;
-  model?: string | null;
-  batteryLevel?: number | null;
-  isOnline?: boolean;
-};
-
-type LocationPin = {
-  deviceId?: string;
-  latitude?: number;
-  longitude?: number;
-};
-
 async function fetchJson(
   url: string,
   init?: RequestInit
@@ -188,37 +175,20 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
     );
 
     const devices = await fetchJson(`${base}/api/admin/devices`);
-    const rows = Array.isArray(devices.body.devices)
-      ? (devices.body.devices as FleetRow[])
-      : [];
-    const row = rows.find((device) => device.deviceId === SMOKE_DEVICE_ID);
     checks.push(
       check(
-        "heartbeat-upsert",
-        Boolean(
-          row &&
-            row.model === "Pixel Smoke" &&
-            row.batteryLevel === 87 &&
-            row.isOnline === true
-        ),
-        row
-          ? `devices upsert visible for ${SMOKE_DEVICE_ID}`
-          : `device ${SMOKE_DEVICE_ID} missing from fleet list`
+        "admin-devices-unauth",
+        devices.status === 401,
+        `Unauthenticated GET /api/admin/devices → ${devices.status}`
       )
     );
 
     const latest = await fetchJson(`${base}/api/admin/locations/latest`);
-    const pins = Array.isArray(latest.body.locations)
-      ? (latest.body.locations as LocationPin[])
-      : [];
-    const pin = pins.find((item) => item.deviceId === SMOKE_DEVICE_ID);
     checks.push(
       check(
-        "heartbeat-gps",
-        Boolean(pin && pin.latitude === 13.7563 && pin.longitude === 100.5018),
-        pin
-          ? `GPS pin recorded for ${SMOKE_DEVICE_ID}`
-          : `no location_logs pin for ${SMOKE_DEVICE_ID}`
+        "admin-locations-unauth",
+        latest.status === 401,
+        `Unauthenticated GET /api/admin/locations/latest → ${latest.status}`
       )
     );
   } catch (error) {
@@ -240,7 +210,8 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
     checks.push(
       check(
         "apk-upload-rejects-empty",
-        upload.status === 400 && uploadBody.success === false,
+        upload.status === 401 ||
+          (upload.status === 400 && uploadBody.success === false),
         `POST /api/admin/releases/upload without APK → ${upload.status}`
       )
     );
@@ -255,8 +226,18 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
   }
 
   try {
-    const home = await fetch(`${base}`, { cache: "no-store" });
-    checks.push(check("home", home.ok, `GET / → ${home.status}`));
+    const home = await fetch(`${base}`, { cache: "no-store", redirect: "manual" });
+    const homeRedirected =
+      home.status >= 300 &&
+      home.status < 400 &&
+      (home.headers.get("location") ?? "").includes("/login");
+    checks.push(
+      check(
+        "home",
+        home.ok || homeRedirected,
+        homeRedirected ? `GET / redirected to /login (${home.status})` : `GET / → ${home.status}`
+      )
+    );
   } catch (error) {
     checks.push(
       check("home", false, error instanceof Error ? error.message : "home unreachable")
@@ -272,7 +253,7 @@ async function fetchSmoke(base: string): Promise<CheckResult[]> {
         login.ok &&
           (html.includes('data-testid="login-page"') ||
             html.includes('data-testid="login-form"') ||
-            html.includes("operator-password")),
+            html.includes("operator-email")),
         `GET /login → ${login.status}`
       )
     );
