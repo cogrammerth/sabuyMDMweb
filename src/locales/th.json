@@ -81,7 +81,7 @@
   "hints": {
     "fleet": "ออนไลน์หมายถึง heartbeat ภายใน 15 นาที แบตเตอรี่ต่ำคือต่ำกว่า 20% ใช้ค้นหาและตัวกรอง แล้วเปิดนโยบายจากปุ่มตั้งค่า",
     "map": "พิน GPS ล่าสุดต่อเครื่อง สีเขียวคือออนไลน์ (heartbeat ภายใน 15 นาที) สีเทาคือออฟไลน์",
-    "provisioning": "สแกน QR บนเครื่องแอนดรอยด์ที่รีเซ็ตโรงงานแล้ว Checksum คำนวณจากไฟล์ APK ที่เผยแพร่ ไม่ได้พิมพ์ด้วยมือ",
+    "provisioning": "สแกน QR บนเครื่องแอนดรอยด์ที่รีเซ็ตโรงงาน กำหนด device ID ล่วงหน้าเพื่อสร้าง deviceToken ใน ADMIN_EXTRAS_BUNDLE — DPC ต้องส่งเป็น X-Device-Token",
     "settings": "เผยแพร่ข้อมูลเมตา APK โดยไม่ต้องดีพลอยฮับใหม่ ลากไฟล์ APK เพื่ออ่านเวอร์ชัน เก็บในบัคเก็ต dpc-releases แล้วเปิดใช้ให้ UpdateWorker",
     "console": "ส่งงานให้โต๊ะผู้เชี่ยวชาญ การบันทึกนโยบายและ QR Zero-Touch อยู่ที่จัดการอุปกรณ์และลงทะเบียนด่วน"
   },
@@ -195,7 +195,7 @@
     "qrTitle": "QR Zero-Touch",
     "checksumFromApk": "Checksum จาก APK ที่เผยแพร่",
     "checksumSource": "Checksum: {source}",
-    "deviceIdLabel": "รหัสอุปกรณ์ที่กำหนดล่วงหน้า (ไม่บังคับ)",
+    "deviceIdLabel": "รหัสอุปกรณ์ล่วงหน้า (สร้าง deviceToken)",
     "leaveSystemApps": "คงแอประบบทั้งหมดไว้",
     "generate": "สร้าง QR",
     "encoding": "กำลังเข้ารหัส…",
@@ -204,7 +204,7 @@
     "copyJson": "คัดลอก JSON",
     "generateFailed": "สร้าง QR ไม่สำเร็จ",
     "copyFailed": "คัดลอก extras JSON ไม่ได้",
-    "hint": "QR เข้ารหัส extras ของ Android Enterprise Checksum คือ SHA-256 (base64url) ของ APK ที่เผยแพร่ — ไม่ได้พิมพ์ด้วยมือ",
+    "hint": "QR เข้ารหัส extras ของ Android Enterprise ถ้ามี device ID จะมี deviceToken — DPC เก็บไว้แล้วส่ง X-Device-Token ตอน heartbeat/policy Checksum คือ SHA-256 (base64url) ของ APK ที่เผยแพร่",
     "qrAlt": "คิวอาร์โค้ดลงทะเบียน Zero-Touch",
     "printTitle": "Sabuy MDM Zero-Touch",
     "printHint": "สแกนบนอุปกรณ์แอนดรอยด์ที่รีเซ็ตโรงงานเพื่อเป็น Device Owner"

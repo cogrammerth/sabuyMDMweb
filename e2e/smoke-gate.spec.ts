@@ -176,10 +176,12 @@ test.describe("Mandatory automated smoke gate", () => {
 
     await page.goto("/provisioning");
     await expect(page.getByTestId("qr-generator")).toBeVisible();
-    await page.getByTestId("qr-device-id").fill(DEVICE_ID);
+    // Use a dedicated enroll id so minting a token does not lock DEVICE_ID for other smoke steps.
+    await page.getByTestId("qr-device-id").fill("smoke-zt-enroll-01");
     await page.getByTestId("qr-generate").click();
     await expect(page.getByTestId("qr-preview")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("qr-preview").locator("img")).toBeVisible();
+    await expect(page.getByTestId("qr-extras")).toContainText("deviceToken");
 
     const unexpected = consoleErrors.filter((text) => !isBenignConsole(text));
     expect(unexpected, unexpected.join("\n")).toEqual([]);

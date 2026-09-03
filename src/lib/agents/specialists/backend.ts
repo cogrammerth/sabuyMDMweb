@@ -263,7 +263,16 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
           middleware?.includes("updateSession") &&
           middleware.includes("/api/heartbeat")
       ),
-      "Operator APIs use Supabase Auth sessions; device endpoints stay public"
+      "Operator APIs use Supabase Auth sessions; device routes use soft/hard X-Device-Token"
+    ),
+    check(
+      "device-token-auth",
+      Boolean(
+        readRepo("src/lib/device-auth.ts")?.includes("requireDeviceJson") &&
+          heartbeat?.includes("requireDeviceJson") &&
+          policy?.includes("requireDeviceJson")
+      ),
+      "Heartbeat and policy call requireDeviceJson for X-Device-Token"
     ),
   ];
 
@@ -281,6 +290,7 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
         "/api/version.json",
         "/api/admin/devices",
         "/api/admin/devices/:deviceId/policy",
+        "/api/admin/devices/:deviceId/token",
         "/api/admin/provisioning/qr",
         "/api/admin/locations/latest",
         "/api/admin/devices/:deviceId/locations",

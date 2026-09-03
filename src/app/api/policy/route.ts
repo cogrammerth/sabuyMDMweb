@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireDeviceJson } from "@/lib/device-auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { DEFAULT_POLICY, toPolicyInsert, toPolicyResponse } from "@/lib/policies";
 import type { Policy, PolicyResponse } from "@/types/mdm";
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const denied = await requireDeviceJson(request, deviceId);
+    if (denied) return denied;
 
     const supabase = getSupabaseAdmin();
 

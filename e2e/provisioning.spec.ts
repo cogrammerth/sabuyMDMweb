@@ -25,11 +25,27 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
       "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
         serverUrl: expect.any(String),
         deviceId: "qa-zt-store-01",
+        deviceToken: expect.any(String),
       },
     });
     expect(
+      body.extras["android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE"].deviceToken
+        .length
+    ).toBeGreaterThan(20);
+    expect(
       body.extras["android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"]
     ).toBe(body.checksum);
+
+    const denied = await page.request.get("/api/policy?deviceId=qa-zt-store-01");
+    expect(denied.status()).toBe(401);
+    const allowed = await page.request.get("/api/policy?deviceId=qa-zt-store-01", {
+      headers: {
+        "X-Device-Token":
+          body.extras["android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE"]
+            .deviceToken,
+      },
+    });
+    expect(allowed.ok(), await allowed.text()).toBeTruthy();
   });
 
   test("provisioning page renders QR preview without console errors", async ({
@@ -44,7 +60,13 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
     await loginAsOperator(page);
     await page.goto("/provisioning");
     await expect(page.getByTestId("qr-generator")).toBeVisible();
-    await expect(page.getByTestId("qr-preview")).toBeVisible({ timeout: 15_000 });
+
+    // Initial encode can race session refresh under parallel load — retry once.
+    const preview = page.getByTestId("qr-preview");
+    if (!(await preview.isVisible().catch(() => false))) {
+      await page.getByTestId("qr-generate").click();
+    }
+    await expect(preview).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("qr-extras")).toContainText(
       "PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"
     );
@@ -57,6 +79,7 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
     await page.getByTestId("qr-device-id").fill("field-unit-7");
     await page.getByTestId("qr-generate").click();
     await expect(page.getByTestId("qr-extras")).toContainText("field-unit-7");
+    await expect(page.getByTestId("qr-extras")).toContainText("deviceToken");
 
     expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
   });

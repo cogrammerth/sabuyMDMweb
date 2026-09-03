@@ -50,10 +50,16 @@ function isMissingColumnError(error: { code?: string; message?: string }): boole
 }
 
 function asDevice(row: unknown): Device {
-  const record = row as Device & { current_app_version_code?: number | null };
+  const record = row as Device & {
+    current_app_version_code?: number | null;
+    device_token_hash?: string | null;
+    device_token_issued_at?: string | null;
+  };
   return {
     ...record,
     current_app_version_code: record.current_app_version_code ?? null,
+    device_token_hash: record.device_token_hash ?? null,
+    device_token_issued_at: record.device_token_issued_at ?? null,
   };
 }
 

@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { readFile } from "fs/promises";
 import path from "path";
 import QRCode from "qrcode";
+import { issueDeviceToken } from "@/lib/device-auth";
 import type {
   ProvisioningChecksumSource,
   ProvisioningExtras,
@@ -122,9 +123,19 @@ export function buildProvisioningExtras(input: {
   config: ProvisioningConfig;
   checksum: string;
   deviceId?: string;
+  deviceToken?: string;
   leaveAllSystemAppsEnabled?: boolean;
 }): ProvisioningExtras {
   const deviceId = (input.deviceId ?? "").trim();
+  const deviceToken = (input.deviceToken ?? "").trim();
+  const adminExtras: ProvisioningExtras["android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE"] =
+    {
+      serverUrl: input.config.serverUrl,
+      deviceId,
+    };
+  if (deviceToken) {
+    adminExtras.deviceToken = deviceToken;
+  }
   return {
     "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME":
       input.config.componentName,
@@ -135,10 +146,7 @@ export function buildProvisioningExtras(input: {
     "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED":
       input.leaveAllSystemAppsEnabled ??
       input.config.leaveAllSystemAppsEnabled,
-    "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
-      serverUrl: input.config.serverUrl,
-      deviceId,
-    },
+    "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": adminExtras,
   };
 }
 
@@ -172,10 +180,13 @@ export async function createProvisioningQr(options?: {
 }): Promise<ProvisioningQrResult> {
   const config = getProvisioningConfig();
   const { checksum, source } = await resolveApkChecksum(config.apkUrl);
+  const deviceId = (options?.deviceId ?? "").trim();
+  const deviceToken = deviceId ? await issueDeviceToken(deviceId) : undefined;
   const extras = buildProvisioningExtras({
     config,
     checksum,
-    deviceId: options?.deviceId,
+    deviceId,
+    deviceToken,
     leaveAllSystemAppsEnabled: options?.leaveAllSystemAppsEnabled,
   });
 

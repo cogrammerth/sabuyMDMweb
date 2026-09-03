@@ -31,6 +31,13 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
   const migration = readRepo("supabase/migrations/001_mdm_phase1.sql") ?? "";
   const appVersionMigration = readRepo("supabase/migrations/002_app_versions.sql") ?? "";
   const apkReleaseMigration = readRepo("supabase/migrations/003_apk_releases.sql") ?? "";
+  const deviceTokenMigration = readRepo("supabase/migrations/004_device_tokens.sql") ?? "";
+  const deviceAuth = readRepo("src/lib/device-auth.ts") ?? "";
+  const heartbeatRoute = readRepo("src/app/api/heartbeat/route.ts") ?? "";
+  const adminDeviceToken = readRepo(
+    "src/app/api/admin/devices/[deviceId]/token/route.ts"
+  ) ?? "";
+  const provisioningLib = readRepo("src/lib/provisioning.ts") ?? "";
   const adminAppVersion = readRepo("src/app/api/admin/app-version/route.ts") ?? "";
   const adminReleaseUpload = readRepo("src/app/api/admin/releases/upload/route.ts") ?? "";
   const adminDeviceDetail = readRepo("src/app/api/admin/devices/[deviceId]/route.ts") ?? "";
@@ -154,7 +161,35 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
         middleware.includes("/login") &&
         middleware.includes("/api/heartbeat") &&
         middleware.includes("getUser"),
-      "Middleware refreshes Supabase sessions and keeps device APIs public"
+      "Middleware refreshes Supabase sessions; device routes stay middleware-public"
+    )
+  );
+  checks.push(
+    check(
+      "device-token-migration",
+      deviceTokenMigration.includes("device_token_hash") &&
+        deviceTokenMigration.includes("device_token_issued_at"),
+      "004_device_tokens.sql adds hash columns (no plaintext)"
+    )
+  );
+  checks.push(
+    check(
+      "device-token-gate",
+      deviceAuth.includes("DEVICE_TOKEN_HEADER") &&
+        deviceAuth.includes("timingSafeEqual") &&
+        heartbeatRoute.includes("requireDeviceJson") &&
+        policyRoute.includes("requireDeviceJson"),
+      "Heartbeat/policy require X-Device-Token via device-auth helper"
+    )
+  );
+  checks.push(
+    check(
+      "device-token-provision",
+      provisioningLib.includes("issueDeviceToken") &&
+        provisioningLib.includes("deviceToken") &&
+        adminDeviceToken.includes("issueDeviceToken") &&
+        adminDeviceToken.includes("requireOperatorJson"),
+      "QR mint + operator rotate issue tokens; rotate is operator-gated"
     )
   );
   checks.push(
@@ -350,7 +385,6 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
   );
 
   const qrPageHint = readRepo("src/components/fleet/QrGenerator.tsx") ?? "";
-  const provisioningLib = readRepo("src/lib/provisioning.ts") ?? "";
   const provisioningRoute =
     readRepo("src/app/api/admin/provisioning/qr/route.ts") ?? "";
 

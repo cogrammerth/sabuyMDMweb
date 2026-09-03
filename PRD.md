@@ -5,8 +5,8 @@
 | Field | Value |
 | --- | --- |
 | Product | Sabuy MDM Web Hub |
-| Version | 0.9.0 (Supabase Auth for operators) |
-| Last updated | 2026-09-02 |
+| Version | 1.0.0 (device API tokens) |
+| Last updated | 2026-09-03 |
 | Primary domain | `https://mdmweb.sabuycall.net` |
 | Repo package | `sabuycall-mdm-web` |
 | Audience | Android Device Owner (DPC) fleet + internal operators |
@@ -177,8 +177,9 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 - Policy success responses are a **flat camelCase object** (no `{ success, data }` wrapper) so the Android client can deserialize directly.
 - `version.json` is likewise a flat object.
 - Heartbeat success: `{ "success": true, "timestamp": <epoch_ms>, "updateAvailable": <bool>, "latestVersionCode": <number> }`.
-- **Phase 1 APIs are unauthenticated.** Treat the public URL as a trusted fleet channel until a later revision adds a device token / HMAC.
-- **Admin APIs require a Supabase Auth session.** Middleware and `requireOperatorJson` call `supabase.auth.getUser()`. Unauthenticated UI visits redirect to `/login`. Device-facing routes stay public.
+- **Admin APIs require a Supabase Auth session.** Middleware and `requireOperatorJson` call `supabase.auth.getUser()`. Unauthenticated UI visits redirect to `/login`.
+- **Device APIs use per-device bearer tokens.** Soft mode (default): if `devices.device_token_hash` is set, `POST /api/heartbeat` and `GET /api/policy` require header `X-Device-Token`. Legacy rows with a null hash remain open until rotated. Hard mode: set `DEVICE_AUTH_REQUIRED=true`. `GET /api/version.json` stays public (fleet-wide channel).
+- Tokens are minted into Zero-Touch `ADMIN_EXTRAS_BUNDLE.deviceToken` when a QR includes a `deviceId`, or via `POST /api/admin/devices/:deviceId/token`. Only the SHA-256 hash is stored.
 
 ---
 
@@ -554,7 +555,8 @@ Operator-gated rename. Body `{ "deviceName": "Store Front Tablet" }` or `null` t
 
 | Method | Path | Phase | Purpose |
 | --- | --- | --- | --- |
-| — | device token / HMAC on heartbeat + policy | later | Stop anonymous fleet spam |
+| — | `POST /api/admin/devices/:deviceId/token` | 5 | Rotate/mint device bearer (operator); plaintext once |
+| — | Soft/hard device token on heartbeat + policy | 5 | Stop anonymous fleet spam |
 
 ---
 
@@ -652,6 +654,7 @@ Canonical SQL: `supabase/migrations/002_app_versions.sql` plus extras in `003_ap
 | **2** | Fleet Dashboard & Remote Policy UI | **Completed** | Operator console: list devices, edit policy, mark online |
 | **3** | Zero-Touch QR Provisioning Generator | **Completed** | Encode DPC extras into a scannable QR for factory reset / new devices |
 | **4** | Geo-Tracking Maps & Railway Production Hardening | **Completed** | Map view of `location_logs`; healthcheck; security headers |
+| **5** | Device API tokens | **Completed** | `X-Device-Token` on heartbeat/policy; QR mint + rotate |
 | **6** | In-hub APK releases | **Completed** | Upload APK to `dpc-releases`, parse metadata, compare device version codes |
 
 Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase 4 is **hardening** (env, health checks, APK hosting, online-timeout job), not “first deploy ever.”
@@ -671,9 +674,9 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 - [x] Executive dashboard on `/` (metrics, quick actions, recent activity)
 - [x] `/admin` console shell (fleet table, policy toggles, QR preview, agent office)
 
-**Not in Phase 1 (known gaps)**
+**Not in Phase 1 (known gaps at the time)**
 
-- Device/API authentication (heartbeat / policy still open)
+- ~~Device/API authentication~~ → shipped in Phase 5 (device tokens)
 - `is_online` column is advisory; dashboards compute from `last_heartbeat`
 - Heartbeat fields for `is_device_owner`
 
@@ -690,9 +693,9 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 - [x] `isOnline` computed from `last_heartbeat` within **15 minutes** (not the `is_online` column).
 - [x] Kiosk save rejected when `kioskMode` is true and `kioskPackage` is empty.
 
-**Deferred**
+**Deferred (at Phase 2 close)**
 
-- Device token / HMAC on heartbeat + policy.
+- ~~Device token / HMAC on heartbeat + policy~~ → Phase 5
 
 **Acceptance (met)**
 
@@ -741,7 +744,36 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 **Still optional / later**
 
 - Retention job for old `location_logs`.
-- Device token on heartbeat/policy to stop anonymous fleet spam.
+- ~~Device token on heartbeat/policy~~ → Phase 5
+- Set `DEVICE_AUTH_REQUIRED=true` after all field units have hashes
+
+---
+
+### Phase 5 — Device API tokens — **Completed**
+
+**Shipped**
+
+- [x] Migration `004_device_tokens.sql` — `device_token_hash`, `device_token_issued_at` (hash only)
+- [x] `src/lib/device-auth.ts` — `X-Device-Token`, soft/hard modes, timing-safe compare
+- [x] `requireDeviceJson` on `POST /api/heartbeat` and `GET /api/policy`
+- [x] QR mint: `ADMIN_EXTRAS_BUNDLE.deviceToken` when `deviceId` is set; upserts device row
+- [x] `POST /api/admin/devices/:deviceId/token` — operator rotate (plaintext once)
+- [x] Playwright: `e2e/device-auth.spec.ts` + provisioning/auth/smoke updates
+
+**Contract**
+
+| Item | Value |
+| --- | --- |
+| Header | `X-Device-Token: <opaque base64url>` |
+| Soft | Hash null → allow; hash set → require match |
+| Hard | `DEVICE_AUTH_REQUIRED=true` → always require match |
+| version.json | Remains public (not device-scoped) |
+
+**Acceptance (met)**
+
+- After QR with `deviceId`, policy/heartbeat without the token return 401.
+- Matching `X-Device-Token` succeeds; rotate invalidates the previous secret.
+- Fleet JSON never exposes `device_token_hash`.
 
 ---
 
@@ -828,7 +860,7 @@ npm install
 npm run dev
 ```
 
-Apply `supabase/migrations/001_mdm_phase1.sql`, `002_app_versions.sql`, and `003_apk_releases.sql` in the Supabase SQL editor if tables or the `dpc-releases` bucket are missing.
+Apply `supabase/migrations/001_mdm_phase1.sql`, `002_app_versions.sql`, `003_apk_releases.sql`, and `004_device_tokens.sql` in the Supabase SQL editor if tables, the `dpc-releases` bucket, or device token columns are missing.
 
 ---
 
@@ -836,7 +868,7 @@ Apply `supabase/migrations/001_mdm_phase1.sql`, `002_app_versions.sql`, and `003
 
 | Topic | Current (Phase 2) | Target |
 | --- | --- | --- |
-| Device APIs | Open to anyone who knows the URL | Device token / HMAC on heartbeat + policy |
+| Device APIs | Soft: token required when hash set; hard via `DEVICE_AUTH_REQUIRED` | Keep soft until fleet rotated; then hard |
 | Admin UI | Supabase Auth email/password on operator pages and `/api/admin/*` | Optional allow-list / SSO later |
 | Database | RLS on, no public policies; service role from API | Keep; never use service role in the browser |
 | Location | Stored as lat/lng per heartbeat; operator-gated map APIs | Retention job still optional |
@@ -867,7 +899,7 @@ Resolve before or during Phase 2:
 1. **Operator auth:** **Decided — Supabase Auth** (email + password, `@supabase/ssr` cookies). Create operator users in the Supabase Auth dashboard (or via Playwright `E2E_OPERATOR_*`).
 2. **Online window:** **15 minutes**, computed from `last_heartbeat`.
 3. **DPC identity:** default `net.sabuycall.mdm/.DeviceAdminReceiver` — freeze in Android repo and override `DPC_COMPONENT_NAME` when final.
-4. **Heartbeat auth:** when to require a provisioning-time token?
+4. **Heartbeat auth:** **Decided — per-device `X-Device-Token`** (soft then hard). DPC reads `deviceToken` from provisioning extras.
 5. **Multi-tenant:** one global fleet, or policies grouped by store/branch?
 6. **APK hosting:** **Decided — Supabase Storage bucket `dpc-releases`** (public read for UpdateWorker). URL publish remains as a fallback.
 
@@ -930,6 +962,7 @@ Visualizer: `/admin` widget `data-testid="agent-office"` (Kunio-kun pixel desks,
 
 | Date | Change |
 | --- | --- |
+| 2026-09-03 | Phase 5: device API tokens (`X-Device-Token`, QR mint, operator rotate, soft/hard modes) |
 | 2026-09-02 | Replace operator shared-password gate with Supabase Auth (login / forgot / reset, session middleware) |
 | 2026-09-02 | In-hub APK releases: Storage `dpc-releases`, upload parser, heartbeat/version compare, fleet version badges |
 | 2026-09-02 | Operator console UX: executive dashboard on `/`, sidebar app shell, status badges, rename modal; Thai default locale |

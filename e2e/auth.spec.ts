@@ -19,14 +19,17 @@ test.describe("Unauthenticated operator console", () => {
     await expect(page.getByTestId("language-selector")).toBeVisible();
   });
 
-  test("device APIs stay public", async ({ request }) => {
+  test("version.json stays public; untokenized devices stay readable in soft mode", async ({
+    request,
+  }) => {
     const health = await request.get("/api/health");
     expect(health.ok()).toBeTruthy();
 
     const version = await request.get("/api/version.json");
     expect(version.ok()).toBeTruthy();
 
-    const policy = await request.get("/api/policy?deviceId=unauth-probe");
+    // Soft mode: unknown deviceId with no stored hash still allows policy.
+    const policy = await request.get("/api/policy?deviceId=unauth-probe-legacy");
     expect(policy.ok()).toBeTruthy();
   });
 

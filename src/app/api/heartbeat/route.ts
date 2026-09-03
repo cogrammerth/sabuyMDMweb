@@ -4,6 +4,7 @@ import {
   getActiveVersionInfo,
   resolveUpdateAvailable,
 } from "@/lib/app-versions";
+import { requireDeviceJson } from "@/lib/device-auth";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { HeartbeatPayload } from "@/types/mdm";
 
@@ -58,6 +59,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const denied = await requireDeviceJson(request, body.deviceId);
+    if (denied) return denied;
 
     const {
       deviceId,

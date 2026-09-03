@@ -14,7 +14,7 @@ Stay inside API routes, `src/types/mdm.ts`, `src/lib/supabase.ts`, and SQL migra
 - `GET /api/policy` is a **flat** `PolicyResponse` (no `{ success, data }` wrapper). Fail **open**: insert errors still return hardcoded defaults.
 - No foreign key from `policies` → `devices`. `location_logs` FK to `devices.device_id` is required.
 - Service role stays server-only. Never prefix `SUPABASE_SERVICE_ROLE_KEY` with `NEXT_PUBLIC_`.
-- Device-facing routes remain unauthenticated until a later PRD revision adds HMAC/tokens. Do not add browser-exposed admin **writes** without operator auth.
+- Device-facing routes stay middleware-public. Route handlers enforce per-device tokens via `X-Device-Token` (`src/lib/device-auth.ts`) once `device_token_hash` is set (soft), or always when `DEVICE_AUTH_REQUIRED=true` (hard). Do not add browser-exposed admin **writes** without operator auth.
 
 ## Out of bounds
 

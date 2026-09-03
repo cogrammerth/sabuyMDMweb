@@ -15,6 +15,7 @@ Audit Device Owner posture. Do not restyle UI or loosen defaults to make a demo 
 - `kioskMode: true` requires a non-empty launchable `kioskPackage`.
 - Policy auto-create failure still returns hardcoded defaults (device must not brick).
 - Zero-Touch extras must include component name, APK download URL, and **checksum** (never operator-typed as the long-term source of truth).
+- When a QR includes a pre-assigned `deviceId`, extras must also mint `deviceToken`; only the hash is stored on `devices`.
 - `SUPABASE_SERVICE_ROLE_KEY` is never a public env binding.
 
 ## Out of bounds

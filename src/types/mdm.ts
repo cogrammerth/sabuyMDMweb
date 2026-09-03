@@ -10,6 +10,9 @@ export interface Device {
   is_online: boolean;
   last_heartbeat: string | null;
   current_app_version_code: number | null;
+  /** SHA-256 hex of the device bearer; never expose on fleet JSON. */
+  device_token_hash: string | null;
+  device_token_issued_at: string | null;
   created_at: string;
 }
 
@@ -168,6 +171,8 @@ export interface ProvisioningExtras {
   "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
     serverUrl: string;
     deviceId: string;
+    /** Present when deviceId was set at QR generation; DPC stores and sends as X-Device-Token. */
+    deviceToken?: string;
   };
 }
 
@@ -196,6 +201,8 @@ type DeviceInsert = {
   is_online?: boolean;
   last_heartbeat?: string | null;
   current_app_version_code?: number | null;
+  device_token_hash?: string | null;
+  device_token_issued_at?: string | null;
   created_at?: string;
 };
 
@@ -211,6 +218,8 @@ type DeviceUpdate = {
   is_online?: boolean;
   last_heartbeat?: string | null;
   current_app_version_code?: number | null;
+  device_token_hash?: string | null;
+  device_token_issued_at?: string | null;
   created_at?: string;
 };
 
@@ -305,6 +314,8 @@ export type Database = {
           is_online: boolean;
           last_heartbeat: string | null;
           current_app_version_code: number | null;
+          device_token_hash: string | null;
+          device_token_issued_at: string | null;
           created_at: string;
         };
         Insert: DeviceInsert;

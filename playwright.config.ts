@@ -30,6 +30,8 @@ const AUTH_FILE = path.join(__dirname, "e2e/.auth/operator.json");
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  // Shared Supabase Auth storageState races under high parallelism (refresh token).
+  workers: 2,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],

@@ -81,7 +81,7 @@
   "hints": {
     "fleet": "Online means a heartbeat within 15 minutes. Low battery is under 20%. Use search and filters to find a device, then open policy from Configure.",
     "map": "Latest GPS pin per device. Green is online (heartbeat within 15 minutes); gray is offline.",
-    "provisioning": "Scan the QR on a factory-reset Android device. The APK checksum is computed from the published file, not typed by hand.",
+    "provisioning": "Scan the QR on a factory-reset Android device. Pre-assign a device ID to mint a deviceToken in ADMIN_EXTRAS_BUNDLE; the DPC must send it as X-Device-Token.",
     "settings": "Publish APK metadata without redeploying the hub. Drop an APK to parse version metadata, store it in the dpc-releases bucket, and activate it for UpdateWorker.",
     "console": "Dispatch a goal to the specialist desks. Policy writes and Zero-Touch QR also live on Fleet and Provisioning."
   },
@@ -195,7 +195,7 @@
     "qrTitle": "Zero-Touch QR",
     "checksumFromApk": "Checksum from published APK",
     "checksumSource": "Checksum: {source}",
-    "deviceIdLabel": "Optional pre-assigned device ID",
+    "deviceIdLabel": "Pre-assigned device ID (mints deviceToken)",
     "leaveSystemApps": "Leave all system apps enabled",
     "generate": "Generate QR",
     "encoding": "Encoding…",
@@ -204,7 +204,7 @@
     "copyJson": "Copy JSON",
     "generateFailed": "Failed to generate QR",
     "copyFailed": "Could not copy extras JSON",
-    "hint": "QR encodes Android Enterprise extras. Checksum is SHA-256 (base64url) of the published APK — not typed by hand.",
+    "hint": "QR encodes Android Enterprise extras. With a device ID, extras include deviceToken — the DPC stores it and sends X-Device-Token on heartbeat/policy. Checksum is SHA-256 (base64url) of the published APK.",
     "qrAlt": "Zero-Touch provisioning QR code",
     "printTitle": "Sabuy MDM Zero-Touch",
     "printHint": "Scan on a factory-reset Android device to become Device Owner."
