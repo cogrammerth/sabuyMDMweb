@@ -49,8 +49,15 @@ function isAlreadyExistsError(message: string): boolean {
   );
 }
 
+/** Avoid `ReturnType<typeof createClient>` — supabase-js default generics diverge from the inferred client. */
+function createAdminClient(url: string, serviceRoleKey: string) {
+  return createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
 async function findUserByEmail(
-  admin: ReturnType<typeof createClient>,
+  admin: ReturnType<typeof createAdminClient>,
   email: string
 ) {
   const normalized = email.toLowerCase();
@@ -84,9 +91,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const admin = createClient(url, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const admin = createAdminClient(url, serviceRoleKey);
 
   const existing = await findUserByEmail(admin, email);
   if (existing) {
