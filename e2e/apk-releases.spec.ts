@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 const DEVICE_ID = "qa-apk-release-device";
 const STALE_CODE = 2;
@@ -8,14 +9,15 @@ const LATEST_URL = "https://mdmweb.sabuycall.net/apk/sabuy-mdm-apk-channel.apk";
 
 test.describe("In-hub APK releases", () => {
   test("upload rejects a non-APK payload without touching storage", async ({
-    request,
+    page,
   }) => {
-    const missing = await request.post("/api/admin/releases/upload");
+    await loginAsOperator(page);
+    const missing = await page.request.post("/api/admin/releases/upload");
     expect(missing.status()).toBe(400);
     const missingBody = await missing.json();
     expect(missingBody.success).toBe(false);
 
-    const fake = await request.post("/api/admin/releases/upload", {
+    const fake = await page.request.post("/api/admin/releases/upload", {
       multipart: {
         apk: {
           name: "fake.apk",
@@ -31,9 +33,11 @@ test.describe("In-hub APK releases", () => {
   });
 
   test("heartbeat and version.json compare currentAppVersionCode to the active channel", async ({
+    page,
     request,
   }) => {
-    const publish = await request.put("/api/admin/app-version", {
+    await loginAsOperator(page);
+    const publish = await page.request.put("/api/admin/app-version", {
       data: {
         versionCode: LATEST_CODE,
         versionName: LATEST_NAME,
@@ -81,7 +85,7 @@ test.describe("In-hub APK releases", () => {
       updateAvailable: true,
     });
 
-    const fleet = await request.get("/api/admin/devices");
+    const fleet = await page.request.get("/api/admin/devices");
     expect(fleet.ok()).toBeTruthy();
     const fleetBody = await fleet.json();
     const row = fleetBody.devices.find(
@@ -108,10 +112,8 @@ test.describe("In-hub APK releases", () => {
       },
     });
 
+    await loginAsOperator(page);
     await page.goto("/settings");
-    if (page.url().includes("/login")) {
-      test.skip(true, "Operator gate required");
-    }
     await expect(page.getByTestId("app-release-editor")).toBeVisible();
     await expect(page.getByTestId("apk-upload-zone")).toBeVisible();
     await expect(page.getByTestId("release-list")).toBeVisible();

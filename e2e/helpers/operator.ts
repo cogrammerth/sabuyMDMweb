@@ -47,13 +47,6 @@ export async function ensureOperatorUser(): Promise<void> {
     (user) => user.email?.toLowerCase() === email.toLowerCase()
   );
   if (existing) {
-    const { error: updateError } = await admin.auth.admin.updateUserById(
-      existing.id,
-      { password, email_confirm: true }
-    );
-    if (updateError) {
-      throw new Error(`Failed to update operator test user: ${updateError.message}`);
-    }
     return;
   }
 
@@ -61,6 +54,7 @@ export async function ensureOperatorUser(): Promise<void> {
     email,
     password,
     email_confirm: true,
+    user_metadata: { role: "operator" },
   });
   if (createError) {
     throw new Error(`Failed to create operator test user: ${createError.message}`);

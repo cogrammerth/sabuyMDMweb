@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 test.describe("Admin dashboard rendering", () => {
   test("device table, policy toggles, QR generator, and office widget render", async ({
@@ -9,6 +10,7 @@ test.describe("Admin dashboard rendering", () => {
       if (msg.type() === "error") consoleErrors.push(msg.text());
     });
 
+    await loginAsOperator(page);
     await page.goto("/admin");
 
     await expect(page.getByTestId("device-table")).toBeVisible();

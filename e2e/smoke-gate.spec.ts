@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 const DEVICE_ID = "test-device-01";
 const GPS = { latitude: 13.7563, longitude: 100.5018 };
@@ -60,6 +61,7 @@ test.describe("Mandatory automated smoke gate", () => {
   });
 
   test("3. heartbeat with GPS/battery returns 200 and upserts fleet + location", async ({
+    page,
     request,
   }) => {
     const heartbeat = await request.post("/api/heartbeat", {
@@ -80,7 +82,10 @@ test.describe("Mandatory automated smoke gate", () => {
     expect(typeof heartbeatBody.updateAvailable).toBe("boolean");
     expect(typeof heartbeatBody.latestVersionCode).toBe("number");
 
-    const fleet = await request.get("/api/admin/devices");
+    await loginAsOperator(page);
+    await page.goto("/devices");
+    await expect(page.getByTestId("operator-session")).toBeVisible();
+    const fleet = await page.request.get("/api/admin/devices");
     expect(fleet.ok(), await fleet.text()).toBeTruthy();
     const fleetBody = await fleet.json();
     const row = fleetBody.devices.find(
@@ -91,7 +96,7 @@ test.describe("Mandatory automated smoke gate", () => {
     expect(row.batteryLevel).toBe(87);
     expect(row.isOnline).toBe(true);
 
-    const latest = await request.get("/api/admin/locations/latest");
+    const latest = await page.request.get("/api/admin/locations/latest");
     expect(latest.ok(), await latest.text()).toBeTruthy();
     const latestBody = await latest.json();
     const pin = latestBody.locations.find(
@@ -125,11 +130,13 @@ test.describe("Mandatory automated smoke gate", () => {
     page,
   }) => {
     const consoleErrors = collectPageErrors(page);
+    await loginAsOperator(page);
 
     for (const path of ["/devices", "/map", "/provisioning", "/settings"] as const) {
       await page.goto(path);
       await expect(page.getByTestId("page-title")).toBeVisible();
       expect(page.url()).toMatch(new RegExp(`${path.replace("/", "\\/")}`));
+      await expect(page.getByTestId("operator-session")).toBeVisible();
     }
 
     const unexpected = consoleErrors.filter((text) => !isBenignConsole(text));
@@ -155,7 +162,11 @@ test.describe("Mandatory automated smoke gate", () => {
     });
     expect(heartbeat.ok(), await heartbeat.text()).toBeTruthy();
 
+    await loginAsOperator(page);
     await page.goto("/devices");
+    await expect(page.getByTestId("operator-session")).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByTestId("device-table")).toBeVisible();
     await page.getByTestId("device-search").fill(DEVICE_ID);
     await expect(page.getByTestId(`device-row-${DEVICE_ID}`)).toBeVisible();

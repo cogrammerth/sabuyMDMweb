@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 const DEVICE_ID = "qa-phase4-geo";
 const POINTS = [
@@ -28,6 +29,7 @@ test.describe("Phase 4 geo map and health", () => {
   });
 
   test("location APIs return camelCase latest pins and ASC history", async ({
+    page,
     request,
   }) => {
     for (const point of POINTS) {
@@ -45,7 +47,8 @@ test.describe("Phase 4 geo map and health", () => {
       expect(heartbeat.ok(), await heartbeat.text()).toBeTruthy();
     }
 
-    const latest = await request.get("/api/admin/locations/latest");
+    await loginAsOperator(page);
+    const latest = await page.request.get("/api/admin/locations/latest");
     expect(latest.ok(), await latest.text()).toBeTruthy();
     const latestBody = await latest.json();
     expect(latestBody.success).toBe(true);
@@ -66,7 +69,7 @@ test.describe("Phase 4 geo map and health", () => {
     expect(pin).toHaveProperty("lastHeartbeat");
     expect(JSON.stringify(pin)).not.toMatch(/device_id|recorded_at|last_heartbeat/);
 
-    const history = await request.get(
+    const history = await page.request.get(
       `/api/admin/devices/${encodeURIComponent(DEVICE_ID)}/locations`
     );
     expect(history.ok(), await history.text()).toBeTruthy();
@@ -107,7 +110,8 @@ test.describe("Phase 4 geo map and health", () => {
     });
     expect(heartbeat.ok(), await heartbeat.text()).toBeTruthy();
 
-    const latest = await request.get("/api/admin/locations/latest");
+    await loginAsOperator(page);
+    const latest = await page.request.get("/api/admin/locations/latest");
     expect(latest.ok()).toBeTruthy();
     const latestBody = await latest.json();
     expect(
@@ -148,6 +152,7 @@ test.describe("Phase 4 geo map and health", () => {
       });
     }
 
+    await loginAsOperator(page);
     await page.goto(`/devices/${encodeURIComponent(DEVICE_ID)}`);
     await expect(page.getByTestId("device-tabs")).toBeVisible();
     await page.getByTestId("tab-history").click();

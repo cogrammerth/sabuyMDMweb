@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 const DEVICE_ID = "qa-phase2-mock";
 
 test.describe("Phase 2 fleet dashboard and policy editor", () => {
+  test.describe.configure({ mode: "serial" });
+
   test("device table renders seeded data, policy form saves, upsert is visible to PolicySyncWorker", async ({
     page,
     request,
@@ -24,20 +27,7 @@ test.describe("Phase 2 fleet dashboard and policy editor", () => {
     });
     expect(heartbeat.ok(), await heartbeat.text()).toBeTruthy();
 
-    const reset = await request.put(`/api/admin/devices/${DEVICE_ID}/policy`, {
-      data: {
-        disableCamera: false,
-        disableFactoryReset: true,
-        disableSafeBoot: true,
-        disableUsbDebugging: false,
-        kioskMode: false,
-        kioskPackage: "",
-        hiddenApps: [],
-        suspendedApps: [],
-      },
-    });
-    expect(reset.ok(), await reset.text()).toBeTruthy();
-
+    await loginAsOperator(page);
     await page.goto("/devices");
     await expect(page.getByTestId("fleet-summary")).toBeVisible();
     await expect(page.getByTestId("summary-total")).toBeVisible();
@@ -51,13 +41,17 @@ test.describe("Phase 2 fleet dashboard and policy editor", () => {
     await expect(page.getByText("12%")).toBeVisible();
 
     await page.getByTestId(`configure-${DEVICE_ID}`).click();
-    await expect(page.getByTestId("policy-toggles")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/devices/${DEVICE_ID}`));
+    await expect(page.getByTestId("policy-toggles")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("device-identity")).toBeVisible();
 
     const camera = page.getByTestId("policy-switch-disableCamera");
-    await expect(camera).toHaveAttribute("aria-checked", "false");
+    const cameraBefore = await camera.getAttribute("aria-checked");
     await camera.click();
-    await expect(camera).toHaveAttribute("aria-checked", "true");
+    await expect(camera).toHaveAttribute(
+      "aria-checked",
+      cameraBefore === "true" ? "false" : "true"
+    );
 
     await page.getByTestId("hidden-apps-input").fill("com.android.vending");
     await page.getByTestId("hidden-apps-add").click();
@@ -67,7 +61,10 @@ test.describe("Phase 2 fleet dashboard and policy editor", () => {
     await page.getByTestId("suspended-apps-add").click();
 
     const kiosk = page.getByTestId("policy-switch-kioskMode");
-    await kiosk.click();
+    await page.getByTestId("kiosk-package").fill("");
+    if ((await kiosk.getAttribute("aria-checked")) !== "true") {
+      await kiosk.click();
+    }
     await expect(page.getByTestId("kiosk-invariant")).toBeVisible();
     await expect(page.getByTestId("policy-save")).toBeDisabled();
     await page.getByTestId("kiosk-package").fill("net.sabuycall.app");
@@ -80,7 +77,7 @@ test.describe("Phase 2 fleet dashboard and policy editor", () => {
     const policy = await request.get(`/api/policy?deviceId=${DEVICE_ID}`);
     expect(policy.ok()).toBeTruthy();
     const body = await policy.json();
-    expect(body.disableCamera).toBe(true);
+    expect(body.disableCamera).toBe(cameraBefore !== "true");
     expect(body.hiddenApps).toContain("com.android.vending");
     expect(body.suspendedApps).toContain("com.example.game");
     expect(body.kioskMode).toBe(false);
@@ -88,22 +85,28 @@ test.describe("Phase 2 fleet dashboard and policy editor", () => {
     expect(consoleErrors, consoleErrors.join("\n")).toEqual([]);
   });
 
-  test("admin policy PUT rejects kiosk mode without a package", async ({ request }) => {
-    const res = await request.put(`/api/admin/devices/${DEVICE_ID}/policy`, {
-      data: {
-        kioskMode: true,
-        kioskPackage: "",
-        disableCamera: false,
-        disableFactoryReset: true,
-        disableSafeBoot: true,
-        disableUsbDebugging: false,
-        hiddenApps: [],
-        suspendedApps: [],
-      },
-    });
-    expect(res.status()).toBe(400);
-    const body = await res.json();
-    expect(body.success).toBe(false);
-    expect(String(body.error)).toMatch(/kioskPackage/i);
+  test("admin policy PUT rejects kiosk mode without a package", async ({ page }) => {
+    await loginAsOperator(page);
+    const result = await page.evaluate(async (deviceId) => {
+      const res = await fetch(`/api/admin/devices/${deviceId}/policy`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          kioskMode: true,
+          kioskPackage: "",
+          disableCamera: false,
+          disableFactoryReset: true,
+          disableSafeBoot: true,
+          disableUsbDebugging: false,
+          hiddenApps: [],
+          suspendedApps: [],
+        }),
+      });
+      return { status: res.status, body: await res.json() };
+    }, DEVICE_ID);
+    expect(result.status).toBe(400);
+    expect(result.body.success).toBe(false);
+    expect(String(result.body.error)).toMatch(/kioskPackage/i);
   });
 });

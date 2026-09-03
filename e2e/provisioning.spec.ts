@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 test.describe("Phase 3 Zero-Touch provisioning", () => {
   test("POST /api/admin/provisioning/qr returns real extras and a data-URL QR", async ({
-    request,
+    page,
   }) => {
-    const res = await request.post("/api/admin/provisioning/qr", {
+    await loginAsOperator(page);
+    const res = await page.request.post("/api/admin/provisioning/qr", {
       data: { deviceId: "qa-zt-store-01", leaveAllSystemAppsEnabled: true },
     });
     expect(res.ok(), await res.text()).toBeTruthy();
@@ -39,6 +41,7 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
     });
     page.on("pageerror", (err) => consoleErrors.push(String(err)));
 
+    await loginAsOperator(page);
     await page.goto("/provisioning");
     await expect(page.getByTestId("qr-generator")).toBeVisible();
     await expect(page.getByTestId("qr-preview")).toBeVisible({ timeout: 15_000 });

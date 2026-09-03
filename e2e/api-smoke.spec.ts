@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 test.describe("Device-facing APIs", () => {
   test("version.json is a flat camelCase object", async ({ request }) => {
@@ -21,8 +22,9 @@ test.describe("Device-facing APIs", () => {
     expect(body.success).toBe(false);
   });
 
-  test("agent state endpoint is readable", async ({ request }) => {
-    const res = await request.get("/api/agents/state");
+  test("agent state endpoint is readable", async ({ page }) => {
+    await loginAsOperator(page);
+    const res = await page.request.get("/api/agents/state");
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body).toHaveProperty("status");
@@ -39,8 +41,9 @@ test.describe("Device-facing APIs", () => {
     expect(body.database).toBe("connected");
   });
 
-  test("admin devices list is camelCase and computes isOnline", async ({ request }) => {
-    const res = await request.get("/api/admin/devices");
+  test("admin devices list is camelCase and computes isOnline", async ({ page }) => {
+    await loginAsOperator(page);
+    const res = await page.request.get("/api/admin/devices");
     expect(res.ok()).toBeTruthy();
     const body = await res.json();
     expect(body.success).toBe(true);

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loginAsOperator } from "./helpers/login";
 
 const DEVICE_ID = "qa-prod-readiness-device";
 const RELEASE_CODE = 9_001_022;
@@ -22,9 +23,9 @@ test.describe("Production readiness — fleet control", () => {
 
   test("device friendly name persists via PATCH and shows in fleet table", async ({
     page,
-    request,
   }) => {
-    const patch = await request.patch(`/api/admin/devices/${DEVICE_ID}`, {
+    await loginAsOperator(page);
+    const patch = await page.request.patch(`/api/admin/devices/${DEVICE_ID}`, {
       data: { deviceName: FRIENDLY_NAME },
     });
     expect(patch.ok(), await patch.text()).toBeTruthy();
@@ -32,7 +33,7 @@ test.describe("Production readiness — fleet control", () => {
     expect(patchBody.success).toBe(true);
     expect(patchBody.device.deviceName).toBe(FRIENDLY_NAME);
 
-    const list = await request.get("/api/admin/devices");
+    const list = await page.request.get("/api/admin/devices");
     expect(list.ok()).toBeTruthy();
     const listBody = await list.json();
     const row = listBody.devices.find(
@@ -53,7 +54,7 @@ test.describe("Production readiness — fleet control", () => {
       "Renamed In UI"
     );
 
-    const verify = await request.get("/api/admin/devices");
+    const verify = await page.request.get("/api/admin/devices");
     const verifyBody = await verify.json();
     const updated = verifyBody.devices.find(
       (device: { deviceId: string }) => device.deviceId === DEVICE_ID
@@ -65,7 +66,8 @@ test.describe("Production readiness — fleet control", () => {
     page,
     request,
   }) => {
-    const publish = await request.put("/api/admin/app-version", {
+    await loginAsOperator(page);
+    const publish = await page.request.put("/api/admin/app-version", {
       data: {
         versionCode: RELEASE_CODE,
         versionName: RELEASE_NAME,

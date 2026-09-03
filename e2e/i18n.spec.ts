@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import en from "../src/locales/en.json";
 import th from "../src/locales/th.json";
+import { loginAsOperator } from "./helpers/login";
 
 const CONSOLE_ROUTES = ["/", "/devices", "/map", "/provisioning", "/settings"] as const;
 const AUTH_ROUTES = ["/login", "/forgot-password"] as const;
@@ -98,6 +99,7 @@ test.describe("Bilingual i18n engine", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("sabuy-mdm-locale", "en");
     });
+    await loginAsOperator(page);
 
     for (const route of CONSOLE_ROUTES) {
       await page.goto(route);
@@ -229,6 +231,7 @@ test.describe("Bilingual i18n engine", () => {
     await page.addInitScript(() => {
       window.localStorage.setItem("sabuy-mdm-locale", "th");
     });
+    await loginAsOperator(page);
     await page.goto("/devices");
     await expect(page.getByTestId("language-selector")).toBeVisible();
     await expect(page.getByTestId("operator-nav")).toBeVisible();
