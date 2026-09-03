@@ -61,10 +61,10 @@ test.describe("Phase 2 fleet dashboard and policy editor", () => {
     await page.getByTestId("suspended-apps-add").click();
 
     const kiosk = page.getByTestId("policy-switch-kioskMode");
-    await page.getByTestId("kiosk-package").fill("");
     if ((await kiosk.getAttribute("aria-checked")) !== "true") {
       await kiosk.click();
     }
+    await page.getByTestId("kiosk-package").fill("");
     await expect(page.getByTestId("kiosk-invariant")).toBeVisible();
     await expect(page.getByTestId("policy-save")).toBeDisabled();
     await page.getByTestId("kiosk-package").fill("net.sabuycall.app");
