@@ -3,7 +3,7 @@ import en from "../src/locales/en.json";
 import th from "../src/locales/th.json";
 import { loginAsOperator } from "./helpers/login";
 
-const CONSOLE_ROUTES = ["/", "/devices", "/map", "/provisioning", "/settings"] as const;
+const CONSOLE_ROUTES = ["/", "/devices", "/map", "/provisioning", "/settings", "/guide"] as const;
 const AUTH_ROUTES = ["/login", "/forgot-password"] as const;
 
 function flattenKeys(obj: unknown, prefix = ""): string[] {
@@ -65,6 +65,7 @@ test.describe("Bilingual i18n engine", () => {
         "nav.zeroTouch",
         "nav.appReleases",
         "nav.office",
+        "nav.guide",
         "nav.logout",
         "auth.email",
         "auth.forgotPassword",
@@ -150,6 +151,13 @@ test.describe("Bilingual i18n engine", () => {
           "สแกนและตั้งค่า"
         );
       }
+      if (route === "/guide") {
+        await expect(page.getByTestId("page-title")).toHaveText("คู่มือการใช้งาน");
+        await expect(page.getByTestId("user-guide")).toBeVisible();
+        await expect(page.getByTestId("guide-step-1")).toContainText(
+          "การเตรียมเครื่องก่อนลงทะเบียน"
+        );
+      }
       if (route === "/") {
         await expect(page.locator("[data-i18n='brand.title']")).toBeVisible();
       }
@@ -178,6 +186,12 @@ test.describe("Bilingual i18n engine", () => {
       if (route === "/provisioning") {
         await expect(page.getByTestId("enroll-step-1")).toContainText(
           "Wipe & Prepare"
+        );
+      }
+      if (route === "/guide") {
+        await expect(page.getByTestId("page-title")).toHaveText("User Guide");
+        await expect(page.getByTestId("guide-step-1")).toContainText(
+          "Prepare the device"
         );
       }
 

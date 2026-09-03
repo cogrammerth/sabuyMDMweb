@@ -11,7 +11,8 @@ export type OperatorNavCurrent =
   | "map"
   | "provisioning"
   | "settings"
-  | "office";
+  | "office"
+  | "guide";
 
 const LINKS: Array<{
   href: string;
@@ -22,8 +23,9 @@ const LINKS: Array<{
     | "nav.map"
     | "nav.zeroTouch"
     | "nav.appReleases"
-    | "nav.office";
-  icon: "grid" | "devices" | "map" | "qr" | "release" | "office";
+    | "nav.office"
+    | "nav.guide";
+  icon: "grid" | "devices" | "map" | "qr" | "release" | "office" | "guide";
 }> = [
   { href: "/", current: "dashboard", key: "nav.dashboard", icon: "grid" },
   { href: "/devices", current: "fleet", key: "nav.fleet", icon: "devices" },
@@ -31,6 +33,7 @@ const LINKS: Array<{
   { href: "/provisioning", current: "provisioning", key: "nav.zeroTouch", icon: "qr" },
   { href: "/settings", current: "settings", key: "nav.appReleases", icon: "release" },
   { href: "/admin", current: "office", key: "nav.office", icon: "office" },
+  { href: "/guide", current: "guide", key: "nav.guide", icon: "guide" },
 ];
 
 function NavIcon({ name }: { name: (typeof LINKS)[number]["icon"] }) {
@@ -84,6 +87,14 @@ function NavIcon({ name }: { name: (typeof LINKS)[number]["icon"] }) {
           <path d="M12 3v12" />
           <path d="M8 11l4 4 4-4" />
           <path d="M5 19h14" />
+        </svg>
+      );
+    case "guide":
+      return (
+        <svg {...common}>
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          <path d="M8 7h8M8 11h6" />
         </svg>
       );
     default:

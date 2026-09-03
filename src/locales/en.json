@@ -15,7 +15,8 @@
     "office": "Agent Office",
     "console": "Console",
     "api": "API",
-    "backToFleet": "← Fleet"
+    "backToFleet": "← Fleet",
+    "guide": "User Guide"
   },
   "lang": {
     "label": "Language",
@@ -76,14 +77,16 @@
     "settings": "App Releases",
     "console": "Agent Office",
     "office": "Agent Office",
-    "devicePolicy": "Device policy"
+    "devicePolicy": "Device policy",
+    "guide": "User Guide"
   },
   "hints": {
     "fleet": "Online means a heartbeat within 15 minutes. Low battery is under 20%. Use search and filters to find a device, then open policy from Configure.",
     "map": "Latest GPS pin per device. Green is online (heartbeat within 15 minutes); gray is offline.",
     "provisioning": "Scan the QR on a factory-reset Android device. Pre-assign a device ID to mint a deviceToken in ADMIN_EXTRAS_BUNDLE; the DPC must send it as X-Device-Token.",
     "settings": "Publish APK metadata without redeploying the hub. Drop an APK to parse version metadata, store it in the dpc-releases bucket, and activate it for UpdateWorker.",
-    "console": "Dispatch a goal to the specialist desks. Policy writes and Zero-Touch QR also live on Fleet and Provisioning."
+    "console": "Dispatch a goal to the specialist desks. Policy writes and Zero-Touch QR also live on Fleet and Provisioning.",
+    "guide": "Step-by-step onboarding for new devices and fleet checks — from preparation through basic troubleshooting."
   },
   "metrics": {
     "totalDevices": "Total devices",
@@ -267,6 +270,46 @@
   "modal": {
     "renameTitle": "Rename device",
     "policyTitle": "Adjust policy"
+  },
+  "guide": {
+    "kicker": "Operator handbook",
+    "heroTitle": "Enroll devices and verify the fleet step by step",
+    "heroBody": "Follow these five steps to prepare an Android phone as Device Owner, confirm it in the console, and handle common issues yourself.",
+    "tocLabel": "Step outline",
+    "step1Badge": "Step 1 · Preparation",
+    "step1Title": "Prepare the device before enrollment",
+    "step1Summary": "Get the handset ready for Zero-Touch so QR setup succeeds on the first try.",
+    "step1Bullet1": "Back up anything you need, then confirm the device runs Android 9.0 or newer.",
+    "step1Bullet2": "Factory reset the phone so it returns to a brand-new out-of-box welcome screen.",
+    "step1Tip": "Tip: Do not enroll a phone that still has a Google account or personal apps — factory reset first.",
+    "step2Badge": "Step 2 · QR Setup",
+    "step2Title": "Open Zero-Touch enrollment mode",
+    "step2Summary": "Launch the QR scanner from the welcome screen without using Play Store.",
+    "step2Bullet1": "On the first welcome screen, tap an empty area six times in a row.",
+    "step2Code": "Hello / Welcome",
+    "step2Bullet2": "The phone opens the QR camera and prompts you to connect Wi-Fi.",
+    "step2Tip": "Note: If the camera does not open, wait until the welcome screen finishes loading, or reboot and try again.",
+    "step3Badge": "Step 3 · Provisioning",
+    "step3Title": "Scan to grant Device Owner",
+    "step3Summary": "Scan the console QR to install Sabuy DPC and become Device Owner.",
+    "step3Bullet1": "Open the console page «Provisioning» to show the enrollment QR Code.",
+    "step3Bullet2": "Scan the QR — the phone downloads and installs Sabuy DPC automatically without Play Store.",
+    "step3Bullet3": "Accept Device Owner permissions when the on-device prompts appear.",
+    "step3Link": "Open Zero-Touch QR →",
+    "step3Tip": "Tip: Pre-assign a device ID in the console before generating the QR so the handset joins the fleet immediately.",
+    "step4Badge": "Step 4 · Fleet check",
+    "step4Title": "Verify status in the system",
+    "step4Summary": "Confirm the device checked in and is running the latest app version.",
+    "step4Bullet1": "Open «Devices» and confirm the handset shows a green online status.",
+    "step4Bullet2": "Check that the app version reads «Up to date».",
+    "step4Link": "Open Devices →",
+    "step4Tip": "Online means a heartbeat within 15 minutes. After a fresh enroll, wait a moment and refresh.",
+    "step5Badge": "Step 5 · Troubleshooting",
+    "step5Title": "Basic troubleshooting & tips",
+    "step5Summary": "A short checklist when scanning fails or status does not update.",
+    "step5Bullet1": "QR scan does nothing: verify Wi-Fi is stable, then regenerate the QR if needed.",
+    "step5Bullet2": "Status never updates: check SIM/Wi-Fi internet and background service permissions.",
+    "step5Tip": "If it still fails, factory reset and restart from Step 1, or contact ops with the device ID."
   },
   "time": {
     "justNow": "just now",

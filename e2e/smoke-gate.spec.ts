@@ -132,7 +132,7 @@ test.describe("Mandatory automated smoke gate", () => {
     const consoleErrors = collectPageErrors(page);
     await loginAsOperator(page);
 
-    for (const path of ["/devices", "/map", "/provisioning", "/settings"] as const) {
+    for (const path of ["/devices", "/map", "/provisioning", "/settings", "/guide"] as const) {
       await page.goto(path);
       await expect(page.getByTestId("page-title")).toBeVisible();
       expect(page.url()).toMatch(new RegExp(`${path.replace("/", "\\/")}`));

@@ -5,7 +5,7 @@ test.describe("Unauthenticated operator console", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test("protected pages redirect to /login", async ({ page, request }) => {
-    for (const path of ["/", "/devices", "/map", "/provisioning", "/settings", "/admin"] as const) {
+    for (const path of ["/", "/devices", "/map", "/provisioning", "/settings", "/guide", "/admin"] as const) {
       const probe = await request.get(path, { maxRedirects: 0 });
       const location = probe.headers()["location"] ?? "";
       expect(probe.status(), `${path} → ${probe.status()} ${location}`).toBeGreaterThanOrEqual(300);

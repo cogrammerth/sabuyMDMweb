@@ -156,6 +156,8 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `src/lib/releases.ts` | Storage upload + publish to `app_versions` |
 | `src/lib/provisioning.ts` | APK checksum + Enterprise extras + QR data URL |
 | `src/app/provisioning/page.tsx` | Operator Zero-Touch QR console |
+| `src/app/guide/page.tsx` | Thai/EN step-by-step operator user guide |
+| `src/components/fleet/UserGuide.tsx` | Guide UI (TOC, steps, callouts) |
 | `src/lib/agents/**` | Multi-agent pipeline state, orchestrator, specialists |
 | `src/context/LanguageContext.tsx` | Operator language provider + `useTranslation` |
 | `src/locales/en.json`, `src/locales/th.json` | English / Thai dictionaries |
@@ -700,7 +702,7 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 **Acceptance (met)**
 
 - Changing policy in UI is visible on the next `PolicySyncWorker` poll.
-- Unauthenticated users cannot read or write `/api/admin/*` or operator pages (`/`, `/devices`, `/map`, `/provisioning`, `/settings`).
+- Unauthenticated users cannot read or write `/api/admin/*` or operator pages (`/`, `/devices`, `/map`, `/provisioning`, `/settings`, `/guide`, `/admin`).
 - `SUPABASE_SERVICE_ROLE_KEY` never appears in client bundles.
 
 ---
@@ -822,7 +824,7 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 - [x] `LanguageProvider` + `useTranslation` (`src/context/LanguageContext.tsx`)
 - [x] Dictionaries `src/locales/th.json` / `src/locales/en.json` (navbar, metrics, 3-step QR enroll, device actions)
 - [x] Header language dropdown (`🇹🇭 ภาษาไทย` / `🇬🇧 English`); choice persisted in `localStorage` (`sabuy-mdm-locale`), default `th` with browser auto-detect
-- [x] Operator chrome on `/`, `/login`, `/devices`, `/map`, `/provisioning`, `/settings` uses `t('key')`
+- [x] Operator chrome on `/`, `/login`, `/devices`, `/map`, `/provisioning`, `/settings`, `/guide` uses `t('key')`
 - [x] Playwright i18n smoke: `e2e/i18n.spec.ts` (instant toggle, no missing keys, no Thai overflow)
 
 **Acceptance (met)**

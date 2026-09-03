@@ -1577,3 +1577,189 @@ textarea {
 .version-badge {
   font-weight: 700;
 }
+
+/* —— User Guide (/guide) —— */
+.user-guide {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.guide-hero {
+  display: grid;
+  grid-template-columns: 1.3fr 0.9fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.guide-hero-copy h2 {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.guide-kicker {
+  margin: 0;
+  color: #ffd36a;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.guide-toc {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.guide-toc a {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  text-decoration: none;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #121820;
+  color: var(--foreground);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.guide-toc a:hover {
+  border-color: #3d4f63;
+  background: #18212c;
+}
+
+.guide-toc-num {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: #e23b3b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.guide-step {
+  scroll-margin-top: 1.25rem;
+}
+
+.guide-step-head {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+}
+
+.guide-step-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.guide-step-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(226, 59, 59, 0.16);
+  color: #ffb4a8;
+  border: 1px solid rgba(226, 59, 59, 0.35);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.guide-bullets {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.guide-bullets li {
+  padding-left: 0.15rem;
+}
+
+.guide-code {
+  display: inline-block;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 6px;
+  background: #0b1016;
+  border: 1px solid var(--line);
+  color: #ffd36a;
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+
+.guide-step-link {
+  display: inline-flex;
+  margin-top: 0.85rem;
+  color: #ffd36a;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.guide-step-link:hover {
+  text-decoration: underline;
+}
+
+.guide-callout {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  border: 1px solid var(--line);
+}
+
+.guide-callout.tip {
+  background: rgba(47, 107, 69, 0.18);
+  border-color: #2f6b45;
+  color: #b6e2c4;
+}
+
+.guide-callout.info {
+  background: rgba(58, 104, 160, 0.18);
+  border-color: #3a68a0;
+  color: #b7d0ef;
+}
+
+.guide-callout.warn {
+  background: rgba(160, 96, 40, 0.18);
+  border-color: #a06028;
+  color: #f0c9a0;
+}
+
+@media (max-width: 900px) {
+  .guide-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .guide-code {
+    display: block;
+    margin: 0.35rem 0 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
