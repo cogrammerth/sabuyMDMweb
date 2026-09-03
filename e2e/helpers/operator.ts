@@ -6,11 +6,16 @@ export type OperatorCredentials = {
 };
 
 export function operatorTestCredentials(): OperatorCredentials {
-  const email = process.env.E2E_OPERATOR_EMAIL?.trim();
-  const password = process.env.E2E_OPERATOR_PASSWORD?.trim();
-  if (!email || !password) {
+  const email =
+    process.env.E2E_OPERATOR_EMAIL?.trim() ||
+    process.env.OPERATOR_EMAIL?.trim() ||
+    "admin@sabuycall.net";
+  const password =
+    process.env.E2E_OPERATOR_PASSWORD?.trim() ||
+    process.env.OPERATOR_PASSWORD?.trim();
+  if (!password) {
     throw new Error(
-      "Set E2E_OPERATOR_EMAIL and E2E_OPERATOR_PASSWORD in .env.local for Playwright."
+      "Set OPERATOR_PASSWORD (or E2E_OPERATOR_PASSWORD) in .env.local for Playwright."
     );
   }
   return { email, password };

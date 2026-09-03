@@ -145,6 +145,7 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `src/lib/supabase-env.ts` | Public URL + anon key helper |
 | `src/middleware.ts` | Session refresh + operator route protection |
 | `src/lib/supabase.ts` | Server-only admin client singleton |
+| `scripts/seed-operator.ts` | `npm run seed:operator` — create confirmed Auth operator via service role |
 | `src/types/mdm.ts` | Shared types + `Database` schema |
 | `supabase/migrations/001_mdm_phase1.sql` | Canonical schema |
 | `.env.example` | Required env var names |
@@ -807,6 +808,8 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 | `NEXT_PUBLIC_SUPABASE_URL` | `.env.local` / host | Yes (URL only) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.local` / host | Yes (anon JWT; required for Auth) |
 | `SUPABASE_SERVICE_ROLE_KEY` | `.env.local` / host | **No — server only** |
+| `OPERATOR_EMAIL` | `.env.local` | No — seed target (default `admin@sabuycall.net`) |
+| `OPERATOR_PASSWORD` | `.env.local` | **No — seed password for `npm run seed:operator`** |
 | `E2E_OPERATOR_EMAIL` | `.env.local` / CI | No — Playwright operator user |
 | `E2E_OPERATOR_PASSWORD` | `.env.local` / CI | **No — Playwright operator password** |
 | `DPC_COMPONENT_NAME` | `.env.local` / Railway | No (server config) |
