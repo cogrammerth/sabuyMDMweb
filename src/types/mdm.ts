@@ -165,8 +165,10 @@ export interface PolicyWriteInput {
 /** Android Enterprise Zero-Touch extras encoded into the provisioning QR. */
 export interface ProvisioningExtras {
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": string;
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME": string;
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": string;
-  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM": string;
+  /** SHA-256 of the APK signing certificate (DER), URL-safe Base64, no padding. */
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM": string;
   "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": boolean;
   "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
     serverUrl: string;

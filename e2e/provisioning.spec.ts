@@ -18,7 +18,9 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
     expect(body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(body.extras).toMatchObject({
       "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME":
-        expect.stringContaining("/"),
+        expect.stringMatching(/^com\.app\.sabuycall\//),
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME":
+        "com.app.sabuycall",
       "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION":
         expect.stringMatching(/^https:\/\//),
       "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true,
@@ -33,8 +35,19 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
         .length
     ).toBeGreaterThan(20);
     expect(
-      body.extras["android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"]
+      body.extras[
+        "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM"
+      ]
     ).toBe(body.checksum);
+    expect(body.extras).not.toHaveProperty(
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"
+    );
+    // Prefer Supabase Storage public URL when DPC_APK_URL is unset.
+    expect(
+      body.extras[
+        "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION"
+      ]
+    ).toMatch(/supabase\.co\/storage\/v1\/object\/public\/dpc-releases\//);
 
     const denied = await page.request.get("/api/policy?deviceId=qa-zt-store-01");
     expect(denied.status()).toBe(401);
@@ -68,7 +81,13 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
     }
     await expect(preview).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("qr-extras")).toContainText(
+      "PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM"
+    );
+    await expect(page.getByTestId("qr-extras")).not.toContainText(
       "PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"
+    );
+    await expect(page.getByTestId("qr-extras")).toContainText(
+      "com.app.sabuycall"
     );
     await expect(page.getByTestId("qr-extras")).not.toContainText(
       "<sha256-of-apk>"

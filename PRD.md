@@ -154,7 +154,8 @@ This is **not** a Google Play EMM / Android Management API wrapper. It is a firs
 | `src/app/api/admin/releases/**` | In-hub APK upload to Storage `dpc-releases` + release list |
 | `src/lib/apk-parse.ts` | APK metadata via `app-info-parser` |
 | `src/lib/releases.ts` | Storage upload + publish to `app_versions` |
-| `src/lib/provisioning.ts` | APK checksum + Enterprise extras + QR data URL |
+| `src/lib/provisioning.ts` | Signing-cert SIGNATURE_CHECKSUM + Enterprise extras + QR data URL |
+| `src/lib/apk-signature.ts` | Extract APK signing cert DER (v2/v3 block, v1 META-INF fallback) |
 | `src/app/provisioning/page.tsx` | Operator Zero-Touch QR console |
 | `src/app/guide/page.tsx` | Thai/EN step-by-step operator user guide |
 | `src/components/fleet/UserGuide.tsx` | Guide UI (TOC, steps, callouts) |
@@ -415,11 +416,11 @@ Operator policy save. Upserts `policies` and bumps `updated_at`. **No FK to devi
 
 #### `GET /api/admin/provisioning/config`
 
-Returns DPC component / APK URL / server URL plus the resolved APK checksum and its source (`local-file` | `remote-apk` | `env-override`).
+Returns DPC component / package / APK URL / server URL plus the resolved **signing-certificate** checksum and its source (`local-file` | `remote-apk` | `env-override`).
 
 #### `POST /api/admin/provisioning/qr`
 
-Builds Android Enterprise extras, computes SHA-256 (base64url, no padding) of the published APK, and returns a PNG data URL.
+Builds Android Enterprise extras, extracts SHA-256 (base64url, no padding) of the APK **signing certificate** (same value as `apksigner verify --print-certs`), and returns a PNG data URL. Emits `PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM` (not the deprecated whole-file `PACKAGE_CHECKSUM`).
 
 **Request**
 
@@ -435,15 +436,20 @@ Builds Android Enterprise extras, computes SHA-256 (base64url, no padding) of th
 ```json
 {
   "success": true,
-  "checksum": "<base64url-sha256>",
-  "checksumSource": "local-file",
+  "checksum": "<base64url-sha256-of-signing-cert>",
+  "checksumSource": "remote-apk",
   "payload": "{…}",
   "qrDataUrl": "data:image/png;base64,…",
-  "extras": { "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "…" }
+  "extras": {
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.app.sabuycall/.DeviceAdminReceiver",
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME": "com.app.sabuycall",
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://…/dpc-releases/…apk",
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM": "…"
+  }
 }
 ```
 
-Checksum resolution order: `DPC_APK_LOCAL_PATH` (or local stub in non-production) → download `DPC_APK_URL` → `DPC_APK_CHECKSUM` env override. Placeholder `<sha256-of-apk>` is never emitted.
+APK URL resolution: `DPC_APK_URL` → active `app_versions.apk_url` (Supabase Storage public URL) → default hub path. Checksum resolution: `DPC_SIGNATURE_CHECKSUM` (or legacy `DPC_APK_CHECKSUM` override) → explicit `DPC_APK_LOCAL_PATH` → download APK and extract signing-cert digest. Placeholder `<sha256-of-apk>` is never emitted.
 
 ### 3.6 Location APIs (Phase 4)
 
@@ -713,7 +719,7 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 - [x] `POST /api/admin/provisioning/qr` + `GET /api/admin/provisioning/config` (operator-gated)
 - [x] `/provisioning` page with real QR (PNG data URL), download, print, copy JSON
-- [x] Extras include component name, APK HTTPS URL, computed checksum, admin extras bundle
+- [x] Extras include component name, package name, APK HTTPS URL, signing-cert `SIGNATURE_CHECKSUM`, admin extras bundle
 - [x] Optional pre-assigned `deviceId` in `PROVISIONING_ADMIN_EXTRAS_BUNDLE`
 - [x] Checksum from local APK path / remote download / env override — never a typed placeholder
 
@@ -721,13 +727,14 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 | Env | Default |
 | --- | --- |
-| `DPC_COMPONENT_NAME` | `net.sabuycall.mdm/.DeviceAdminReceiver` |
-| `DPC_APK_URL` | `https://mdmweb.sabuycall.net/apk/sabuy-mdm.apk` |
+| `DPC_COMPONENT_NAME` | `com.app.sabuycall/.DeviceAdminReceiver` |
+| `DPC_PACKAGE_NAME` | `com.app.sabuycall` |
+| `DPC_APK_URL` | unset → active `app_versions.apk_url` (Supabase `dpc-releases`) |
 | `MDM_SERVER_URL` | `https://mdmweb.sabuycall.net` |
-| `DPC_APK_LOCAL_PATH` | `fixtures/provisioning-apk-stub.bin` in non-production |
-| `DPC_APK_CHECKSUM` | unset (last-resort override) |
+| `DPC_APK_LOCAL_PATH` | unset (optional path to a signed APK) |
+| `DPC_SIGNATURE_CHECKSUM` | unset (last-resort signing-cert digest override) |
 
-Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONENT_NAME` and host the APK so production hashes real bytes.
+Publish a signed DPC APK via App Releases so QR generation can download it and extract `SIGNATURE_CHECKSUM`. Do not use a whole-APK file hash.
 
 ---
 
@@ -846,11 +853,12 @@ Freeze the real DPC package/receiver in the Android repo, then set `DPC_COMPONEN
 | `OPERATOR_PASSWORD` | `.env.local` | **No — seed password for `npm run seed:operator`** |
 | `E2E_OPERATOR_EMAIL` | `.env.local` / CI | No — Playwright operator user |
 | `E2E_OPERATOR_PASSWORD` | `.env.local` / CI | **No — Playwright operator password** |
-| `DPC_COMPONENT_NAME` | `.env.local` / Railway | No (server config) |
-| `DPC_APK_URL` | `.env.local` / Railway | No (server config) |
-| `MDM_SERVER_URL` | `.env.local` / Railway | No (server config) |
-| `DPC_APK_LOCAL_PATH` | `.env.local` / CI | No — path to APK bytes for checksum |
-| `DPC_APK_CHECKSUM` | `.env.local` / Railway | No — last-resort override |
+| `DPC_COMPONENT_NAME` | `.env.local` / host | No (server config; default `com.app.sabuycall/.DeviceAdminReceiver`) |
+| `DPC_PACKAGE_NAME` | `.env.local` / host | No (server config; default `com.app.sabuycall`) |
+| `DPC_APK_URL` | `.env.local` / host | No — optional override; else active release URL |
+| `MDM_SERVER_URL` | `.env.local` / host | No (server config) |
+| `DPC_APK_LOCAL_PATH` | `.env.local` / CI | No — path to signed APK for signature checksum |
+| `DPC_SIGNATURE_CHECKSUM` | `.env.local` / host | No — last-resort signing-cert digest override |
 
 Do not commit `.env.local`. Do not put secrets in this PRD.
 
@@ -900,7 +908,7 @@ Resolve before or during Phase 2:
 
 1. **Operator auth:** **Decided — Supabase Auth** (email + password, `@supabase/ssr` cookies). Create operator users in the Supabase Auth dashboard (or via Playwright `E2E_OPERATOR_*`).
 2. **Online window:** **15 minutes**, computed from `last_heartbeat`.
-3. **DPC identity:** default `net.sabuycall.mdm/.DeviceAdminReceiver` — freeze in Android repo and override `DPC_COMPONENT_NAME` when final.
+3. **DPC identity:** default `com.app.sabuycall/.DeviceAdminReceiver` — override `DPC_COMPONENT_NAME` / `DPC_PACKAGE_NAME` if the Android package changes.
 4. **Heartbeat auth:** **Decided — per-device `X-Device-Token`** (soft then hard). DPC reads `deviceToken` from provisioning extras.
 5. **Multi-tenant:** one global fleet, or policies grouped by store/branch?
 6. **APK hosting:** **Decided — Supabase Storage bucket `dpc-releases`** (public read for UpdateWorker). URL publish remains as a fallback.

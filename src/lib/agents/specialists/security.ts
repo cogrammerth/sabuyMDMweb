@@ -392,18 +392,20 @@ export async function runSecurityAuditor(goal: string): Promise<TaskResult> {
     check(
       "zt-extras-shape",
       provisioningLib.includes("PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME") &&
-        provisioningLib.includes("PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM") &&
-        provisioningLib.includes("sha256Base64Url"),
-      "Zero-Touch extras include component name and computed APK checksum"
+        provisioningLib.includes("PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME") &&
+        provisioningLib.includes("PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM") &&
+        !provisioningLib.includes("PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM") &&
+        provisioningLib.includes("resolveSignatureChecksum"),
+      "Zero-Touch extras use component, package name, and signing-cert SIGNATURE_CHECKSUM"
     )
   );
   checks.push(
     check(
       "zt-no-placeholder-checksum",
       !qrPageHint.includes("<sha256-of-apk>") &&
-        provisioningLib.includes("resolveApkChecksum") &&
-        provisioningLib.includes("sha256Base64Url"),
-      "UI does not ship a hand-typed checksum; server computes it"
+        provisioningLib.includes("resolveSignatureChecksum") &&
+        provisioningLib.includes("signatureChecksumFromApk"),
+      "UI does not ship a hand-typed checksum; server extracts signing-cert digest"
     )
   );
   checks.push(

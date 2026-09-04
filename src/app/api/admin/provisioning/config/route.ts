@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireOperatorJson } from "@/lib/operator-auth";
 import {
-  getProvisioningConfig,
-  resolveApkChecksum,
+  resolveProvisioningConfig,
+  resolveSignatureChecksum,
+  getProvisioningConfigSync,
 } from "@/lib/provisioning";
 import type { NextRequest } from "next/server";
 
@@ -13,8 +14,8 @@ export async function GET(request: NextRequest) {
   if (denied) return denied;
 
   try {
-    const config = getProvisioningConfig();
-    const { checksum, source } = await resolveApkChecksum(config.apkUrl);
+    const config = await resolveProvisioningConfig();
+    const { checksum, source } = await resolveSignatureChecksum(config.apkUrl);
     return NextResponse.json({
       success: true,
       config,
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "Failed to resolve provisioning config",
-        config: getProvisioningConfig(),
+        config: getProvisioningConfigSync(),
       },
       { status: 503 }
     );

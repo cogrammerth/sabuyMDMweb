@@ -203,11 +203,12 @@ export async function runBackendArchitect(goal: string): Promise<TaskResult> {
     check(
       "provisioning-checksum",
       Boolean(
-        provisioning?.includes("sha256Base64Url") &&
-          provisioning.includes("resolveApkChecksum") &&
+        provisioning?.includes("signatureChecksumFromApk") &&
+          provisioning.includes("resolveSignatureChecksum") &&
+          provisioning.includes("PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM") &&
           provisioning.includes("createProvisioningQr")
       ),
-      "Provisioning checksum is computed from APK bytes (base64url SHA-256)"
+      "Provisioning checksum is the APK signing-cert digest (SIGNATURE_CHECKSUM)"
     ),
     check(
       "provisioning-qr-route",
