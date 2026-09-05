@@ -15,9 +15,9 @@ import type {
 export type { ProvisioningExtras, ProvisioningChecksumSource };
 
 /** DPC package + DeviceAdminReceiver (Android component name). */
-export const DEFAULT_DPC_PACKAGE = "com.app.sabuycall";
+export const DEFAULT_DPC_PACKAGE = "com.sabuycall.sabuymdm";
 export const DEFAULT_DPC_COMPONENT =
-  "com.app.sabuycall/.DeviceAdminReceiver";
+  "com.sabuycall.sabuymdm/.receiver.SabuyDeviceAdminReceiver";
 
 export const DEFAULT_SERVER_URL = "https://mdmweb.sabuycall.net";
 
