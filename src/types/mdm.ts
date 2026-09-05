@@ -169,6 +169,11 @@ export interface ProvisioningExtras {
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": string;
   /** SHA-256 of the APK signing certificate (DER), URL-safe Base64, no padding. */
   "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM": string;
+  /**
+   * Allow sideloaded DPCs signed with a self-generated/test keystore
+   * (avoids Play Protect "App blocked to protect your device" during QR setup).
+   */
+  "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS": boolean;
   "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": boolean;
   "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
     serverUrl: string;

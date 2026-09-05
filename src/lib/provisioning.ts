@@ -235,9 +235,14 @@ export function buildProvisioningExtras(input: {
       input.config.apkUrl,
     "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM":
       input.checksum,
-    "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED":
+    // Self-signed / private keystore DPC — required for non-Play distribution.
+    // Must be a JSON boolean (true), never the string "true".
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS":
+      true,
+    "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": Boolean(
       input.leaveAllSystemAppsEnabled ??
-      input.config.leaveAllSystemAppsEnabled,
+        input.config.leaveAllSystemAppsEnabled
+    ),
     "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": adminExtras,
   };
 }
@@ -270,6 +275,20 @@ export function validateExtrasShape(extras: ProvisioningExtras): string | null {
   }
   if (!checksum || checksum === "<sha256-of-apk>") {
     return "PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM must be a real signing-cert SHA-256 (base64url)";
+  }
+  if (
+    extras[
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS"
+    ] !== true
+  ) {
+    return "PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS must be boolean true";
+  }
+  if (
+    typeof extras[
+      "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED"
+    ] !== "boolean"
+  ) {
+    return "PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED must be a JSON boolean";
   }
   return null;
 }

@@ -24,12 +24,29 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
       "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION":
         expect.stringMatching(/^https:\/\//),
       "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true,
+      "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS":
+        true,
       "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
         serverUrl: expect.any(String),
         deviceId: "qa-zt-store-01",
         deviceToken: expect.any(String),
       },
     });
+    expect(
+      body.extras[
+        "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS"
+      ]
+    ).toBe(true);
+    expect(
+      typeof body.extras[
+        "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_ALLOW_TEST_KEYS"
+      ]
+    ).toBe("boolean");
+    expect(
+      typeof body.extras[
+        "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED"
+      ]
+    ).toBe("boolean");
     expect(
       body.extras["android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE"].deviceToken
         .length
