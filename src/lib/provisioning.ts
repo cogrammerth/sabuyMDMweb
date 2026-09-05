@@ -16,8 +16,14 @@ export type { ProvisioningExtras, ProvisioningChecksumSource };
 
 /** DPC package + DeviceAdminReceiver (Android component name). */
 export const DEFAULT_DPC_PACKAGE = "com.sabuycall.sabuymdm";
-export const DEFAULT_DPC_COMPONENT =
-  "com.sabuycall.sabuymdm/.receiver.SabuyDeviceAdminReceiver";
+/** Fully-qualified receiver class from the release APK manifest. */
+export const DEFAULT_DPC_RECEIVER_CLASS =
+  "com.sabuycall.sabuymdm.receiver.SabuyDeviceAdminReceiver";
+/**
+ * Zero-Touch COMPONENT_NAME must be package/fully.qualified.Receiver.
+ * Prefer the explicit form over `.receiver.…` relative shorthand for OEM parsers.
+ */
+export const DEFAULT_DPC_COMPONENT = `${DEFAULT_DPC_PACKAGE}/${DEFAULT_DPC_RECEIVER_CLASS}`;
 
 export const DEFAULT_SERVER_URL = "https://mdmweb.sabuycall.net";
 
@@ -51,11 +57,32 @@ function packageFromComponent(componentName: string): string {
   return pkg;
 }
 
+/**
+ * Expand `package/.RelativeClass` into `package/package.RelativeClass`
+ * so ManagedProvisioning always receives a fully-qualified component.
+ */
+export function normalizeComponentName(componentName: string): string {
+  const trimmed = componentName.trim();
+  const slash = trimmed.indexOf("/");
+  if (slash <= 0) return trimmed;
+  const pkg = trimmed.slice(0, slash).trim();
+  const cls = trimmed.slice(slash + 1).trim();
+  if (!pkg || !cls) return trimmed;
+  if (cls.startsWith(".")) {
+    return `${pkg}/${pkg}${cls}`;
+  }
+  if (!cls.includes(".")) {
+    return `${pkg}/${pkg}.${cls}`;
+  }
+  return `${pkg}/${cls}`;
+}
+
 export function getProvisioningConfigSync(
   apkUrl = DEFAULT_APK_URL
 ): ProvisioningConfig {
-  const componentName =
-    process.env.DPC_COMPONENT_NAME?.trim() || DEFAULT_DPC_COMPONENT;
+  const componentName = normalizeComponentName(
+    process.env.DPC_COMPONENT_NAME?.trim() || DEFAULT_DPC_COMPONENT
+  );
   const packageName =
     process.env.DPC_PACKAGE_NAME?.trim() ||
     packageFromComponent(componentName) ||
@@ -262,7 +289,11 @@ export function validateExtrasShape(extras: ProvisioningExtras): string | null {
     ]?.trim();
 
   if (!component || !component.includes("/")) {
-    return "PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME must be package/.Receiver";
+    return "PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME must be package/fully.qualified.Receiver";
+  }
+  const cls = component.split("/")[1] ?? "";
+  if (!cls || cls.startsWith(".") || !cls.includes(".")) {
+    return "PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME must use a fully-qualified receiver class";
   }
   if (!packageName) {
     return "PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME is required";

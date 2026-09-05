@@ -18,9 +18,9 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
     expect(body.qrDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(body.extras).toMatchObject({
       "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME":
-        expect.stringMatching(/^com\.app\.sabuycall\//),
+        "com.sabuycall.sabuymdm/com.sabuycall.sabuymdm.receiver.SabuyDeviceAdminReceiver",
       "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME":
-        "com.app.sabuycall",
+        "com.sabuycall.sabuymdm",
       "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION":
         expect.stringMatching(/^https:\/\//),
       "android.app.extra.PROVISIONING_LEAVE_ALL_SYSTEM_APPS_ENABLED": true,
@@ -104,7 +104,10 @@ test.describe("Phase 3 Zero-Touch provisioning", () => {
       "PROVISIONING_DEVICE_ADMIN_PACKAGE_CHECKSUM"
     );
     await expect(page.getByTestId("qr-extras")).toContainText(
-      "com.app.sabuycall"
+      "com.sabuycall.sabuymdm"
+    );
+    await expect(page.getByTestId("qr-extras")).toContainText(
+      "SabuyDeviceAdminReceiver"
     );
     await expect(page.getByTestId("qr-extras")).not.toContainText(
       "<sha256-of-apk>"

@@ -441,8 +441,8 @@ Builds Android Enterprise extras, extracts SHA-256 (base64url, no padding) of th
   "payload": "{…}",
   "qrDataUrl": "data:image/png;base64,…",
   "extras": {
-    "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.app.sabuycall/.DeviceAdminReceiver",
-    "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME": "com.app.sabuycall",
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.sabuycall.sabuymdm/com.sabuycall.sabuymdm.receiver.SabuyDeviceAdminReceiver",
+    "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_NAME": "com.sabuycall.sabuymdm",
     "android.app.extra.PROVISIONING_DEVICE_ADMIN_PACKAGE_DOWNLOAD_LOCATION": "https://…/dpc-releases/…apk",
     "android.app.extra.PROVISIONING_DEVICE_ADMIN_SIGNATURE_CHECKSUM": "…"
   }
@@ -727,8 +727,8 @@ Domain `https://mdmweb.sabuycall.net` may already front a Railway service. Phase
 
 | Env | Default |
 | --- | --- |
-| `DPC_COMPONENT_NAME` | `com.app.sabuycall/.DeviceAdminReceiver` |
-| `DPC_PACKAGE_NAME` | `com.app.sabuycall` |
+| `DPC_COMPONENT_NAME` | `com.sabuycall.sabuymdm/com.sabuycall.sabuymdm.receiver.SabuyDeviceAdminReceiver` |
+| `DPC_PACKAGE_NAME` | `com.sabuycall.sabuymdm` |
 | `DPC_APK_URL` | unset → active `app_versions.apk_url` (Supabase `dpc-releases`) |
 | `MDM_SERVER_URL` | `https://mdmweb.sabuycall.net` |
 | `DPC_APK_LOCAL_PATH` | unset (optional path to a signed APK) |
@@ -853,8 +853,8 @@ Publish a signed DPC APK via App Releases so QR generation can download it and e
 | `OPERATOR_PASSWORD` | `.env.local` | **No — seed password for `npm run seed:operator`** |
 | `E2E_OPERATOR_EMAIL` | `.env.local` / CI | No — Playwright operator user |
 | `E2E_OPERATOR_PASSWORD` | `.env.local` / CI | **No — Playwright operator password** |
-| `DPC_COMPONENT_NAME` | `.env.local` / host | No (server config; default `com.app.sabuycall/.DeviceAdminReceiver`) |
-| `DPC_PACKAGE_NAME` | `.env.local` / host | No (server config; default `com.app.sabuycall`) |
+| `DPC_COMPONENT_NAME` | `.env.local` / host | No (server config; default `com.sabuycall.sabuymdm/…SabuyDeviceAdminReceiver`) |
+| `DPC_PACKAGE_NAME` | `.env.local` / host | No (server config; default `com.sabuycall.sabuymdm`) |
 | `DPC_APK_URL` | `.env.local` / host | No — optional override; else active release URL |
 | `MDM_SERVER_URL` | `.env.local` / host | No (server config) |
 | `DPC_APK_LOCAL_PATH` | `.env.local` / CI | No — path to signed APK for signature checksum |
@@ -908,7 +908,7 @@ Resolve before or during Phase 2:
 
 1. **Operator auth:** **Decided — Supabase Auth** (email + password, `@supabase/ssr` cookies). Create operator users in the Supabase Auth dashboard (or via Playwright `E2E_OPERATOR_*`).
 2. **Online window:** **15 minutes**, computed from `last_heartbeat`.
-3. **DPC identity:** default `com.app.sabuycall/.DeviceAdminReceiver` — override `DPC_COMPONENT_NAME` / `DPC_PACKAGE_NAME` if the Android package changes.
+3. **DPC identity:** default `com.sabuycall.sabuymdm/com.sabuycall.sabuymdm.receiver.SabuyDeviceAdminReceiver` — override `DPC_COMPONENT_NAME` / `DPC_PACKAGE_NAME` if the Android package changes.
 4. **Heartbeat auth:** **Decided — per-device `X-Device-Token`** (soft then hard). DPC reads `deviceToken` from provisioning extras.
 5. **Multi-tenant:** one global fleet, or policies grouped by store/branch?
 6. **APK hosting:** **Decided — Supabase Storage bucket `dpc-releases`** (public read for UpdateWorker). URL publish remains as a fallback.
